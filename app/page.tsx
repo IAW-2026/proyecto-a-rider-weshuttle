@@ -46,7 +46,7 @@ export default async function HomePage() {
                Destinos sugeridos
             </p>
             <span className="text-xs bg-blue-100 text-blue-600 px-3 py-1 rounded-full font-semibold">
-              {destinosFinales.length} disponibles
+              {destinosFinales.length} Disponibles
             </span>
           </div>
           
