@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Pasajero {
+  clerk_user_id String @id // Usamos este como ID principal
+  company_code  String?
+  reservas      Reserva[]
+}
+
+model Reserva {
+  id                String      @id @default(cuid())
+  clerk_user_id     String
+  pool_id           String
+  estado_reserva    String
+  punto_de_partida  String
+  destino_id        String
+  horario           DateTime
+
+  pasajero          Pasajero    @relation(fields: [clerk_user_id], references: [clerk_user_id])
+  destino           Destino     @relation(fields: [destino_id], references: [id])
+}
+
+model Destino {
+  id                String      @id @default(cuid())
+  nombre            String
+  ubicacion_lat_long String
+  reservas          Reserva[]
+}
