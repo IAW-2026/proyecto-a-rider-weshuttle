@@ -2,7 +2,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "WeShuttle - Rider App",
-  description: "Tu transporte universitario",
+  description: "Tu transporte universitario.",
 };
 
 export default function RootLayout({
