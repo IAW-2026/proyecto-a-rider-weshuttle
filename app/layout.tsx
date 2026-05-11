@@ -1,3 +1,4 @@
+import { ClerkProvider } from '@clerk/nextjs'; // Importás la librería [cite: 131]
 import "./globals.css";
 
 export const metadata = {
@@ -13,8 +14,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="bg-gray-50 antialiased font-sans">
-        {/* Acá podrías poner un Navbar si quisieras que sea fijo */}
-        {children}
+        <ClerkProvider>{children}</ClerkProvider>
       </body>
     </html>
   );
