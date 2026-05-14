@@ -2,6 +2,7 @@ import { defineConfig } from '@prisma/config';
 
 export default defineConfig({
   datasource: {
-    url: "postgresql://neondb_owner:npg_yfJeu89ZGhmI@ep-solitary-surf-aprltsxq-pooler.c-7.us-east-1.aws.neon.tech/neondb?uselibpqcompat=true&sslmode=require",
+    // Usamos process.env para que sea seguro y dinámico
+    url: process.env.DATABASE_URL,
   },
 });
