@@ -4,10 +4,14 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL") 
 }
 
 model Pasajero {
-  clerk_user_id String @id // Usamos este como ID principal
+  clerk_user_id String  @id
+  nombre        String?
+  email         String? @unique
+  rol           String  @default("RIDER")
   company_code  String?
   reservas      Reserva[]
 }
