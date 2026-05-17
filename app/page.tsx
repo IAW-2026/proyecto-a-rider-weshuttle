@@ -1,97 +1,81 @@
-import { auth, currentUser } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
-import { prisma } from "@/lib/prisma"
-import { UserGreeting } from "@/app/ui/UserGreeting"
-import { DestinoCard } from "@/app/ui/tarjetas/DestinoCard"
-import { UserButton } from "@clerk/nextjs"
+import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { auth } from '@clerk/nextjs/server'
+import { UserButton } from "@clerk/nextjs"
 
-export default async function HomePage() {
-  const { userId } = await auth()
-  const user = await currentUser()
+// Esta página NO es estática, se recarga con la base de datos
+export const dynamic = 'force-dynamic'
 
-  if (!userId || !user) redirect('/sign-in')
-
-  const email = user.emailAddresses[0]?.emailAddress?.toLowerCase()
-  
-  // VALIDACIÓN POR VARIABLE DE ENTORNO
-  const isAdminEmail = email === process.env.ADMIN_EMAIL
-
-  // Buscamos en Neon (tabla Pasajero)
-  const dbUser = await prisma.pasajero.findUnique({
-    where: { clerk_user_id: userId }
+export default async function VistaPublicaViajes() {
+  // 1. Traemos los viajes REALES de la base de datos Neon 
+  const viajes = await prisma.pool.findMany({
+    orderBy: {
+      fecha_viaje: 'desc'
+    }
   })
 
-  // Traemos los destinos
-  const destinos = await prisma.destino.findMany()
+  // 2. Verificamos si hay un usuario logueado
+  const { userId } = await auth()
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-      <UserGreeting />
-
-      <header className="p-6 bg-white border-b border-gray-100 flex justify-between items-center sticky top-0 z-50">
-        <h1 className="text-2xl font-black text-black italic tracking-tighter leading-none">
-          We<span className="text-blue-600">Shuttle</span>
-        </h1>
+    <div className="min-h-screen bg-gray-50 p-8 text-black font-sans">
+      <div className="max-w-4xl mx-auto">
         
-        <div className="flex items-center gap-3 bg-blue-50/50 pl-4 pr-1 py-1 rounded-full border border-blue-100 shadow-sm">
-          <div className="text-right">
-            <p className="text-[11px] font-bold text-blue-900 leading-none">{dbUser?.nombre || user.firstName}</p>
-            {isAdminEmail ? (
-              <Link href="/admin" className="text-[9px] text-blue-600 font-black uppercase tracking-widest hover:text-blue-800 transition-colors">
-                Panel Admin 🛠️
-              </Link>
+        {/* CABECERA */}
+        <header className="flex justify-between items-center mb-10">
+          <div>
+            <h1 className="text-3xl font-black italic">WeShuttle</h1>
+            <p className="text-gray-500 text-sm mt-1">Estado de las combis en tiempo real</p>
+          </div>
+          <div className="flex items-center gap-4">
+            {/* Si está logueado mostramos el botón de admin, sino el de ingresar */}
+            {userId ? (
+              <>
+                <Link href="/admin" className="text-[10px] font-bold uppercase text-blue-600 hover:underline">
+                  Panel Admin
+                </Link>
+                <UserButton />
+              </>
             ) : (
-              <p className="text-[9px] text-blue-400 font-medium uppercase tracking-tighter">Rider</p>
+              <Link href="/sign-in" className="bg-black text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-colors shadow-sm">
+                Soy Conductor / Admin
+              </Link>
             )}
           </div>
-          <UserButton appearance={{ elements: { userButtonAvatarBox: 'w-10 h-10 border-2 border-white' } }} />
-        </div>
-      </header>
+        </header>
 
-      <main className="p-6 flex-1 w-full max-w-2xl mx-auto mb-24">
-        <div className="mb-10">
-          <div className="bg-white border border-gray-200 p-4 rounded-3xl flex items-center gap-3 shadow-sm focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
-            <span className="text-lg">🔍</span>
-            <input 
-              className="bg-transparent border-none outline-none w-full text-sm font-semibold text-gray-700" 
-              placeholder="¿A dónde vamos hoy?" 
-            />
-          </div>
-        </div>
+        {/* TABLA DE VIAJES PÚBLICA */}
+        <div className="bg-white rounded-[2rem] border border-gray-200 overflow-hidden shadow-sm">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="p-6 text-[10px] font-black uppercase text-gray-400 tracking-widest">Conductor</th>
+                <th className="p-6 text-[10px] font-black uppercase text-gray-400 tracking-widest">Patente</th>
+                <th className="p-6 text-[10px] font-black uppercase text-gray-400 tracking-widest text-right">Estado Actual</th>
+              </tr>
+            </thead>
+            <tbody>
+              {viajes.map((viaje) => (
+                <tr key={viaje.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+                  <td className="p-6 font-bold text-sm">{viaje.conductor_nombre}</td>
+                  <td className="p-6 text-xs text-gray-500 font-mono">{viaje.vehiculo_patente}</td>
+                  <td className="p-6 text-right">
+                    <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider ${viaje.estado === 'Programado' ? 'bg-blue-50 text-blue-600' : viaje.estado === 'En camino' ? 'bg-yellow-50 text-yellow-600' : 'bg-gray-100 text-gray-500'}`}>
+                      {viaje.estado}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-        <section>
-          <div className="flex justify-between items-center mb-6 px-1">
-            <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Destinos Sugeridos</h2>
-            <span className="text-[10px] font-black text-green-700 bg-green-100 px-2 py-0.5 rounded uppercase">
-              {destinos.length} ACTIVOS
-            </span>
-          </div>
-          
-          <div className="grid gap-4">
-            {destinos.map((d) => (
-              <Link key={d.id} href={`/destino/${d.id}`} className="block transform active:scale-95 transition-transform">
-                <DestinoCard nombre={d.nombre} ubicacion_lat_long={d.ubicacion_lat_long} />
-              </Link>
-            ))}
-          </div>
-        </section>
-      </main>
-
-      <footer className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 p-4 pb-8 flex justify-around items-center z-50">
-        <Link href="/" className="flex flex-col items-center text-blue-600">
-          <span className="text-2xl">🏠</span>
-          <span className="text-[9px] font-black mt-1 uppercase tracking-tighter">Inicio</span>
-        </Link>
-        <div className="flex flex-col items-center text-gray-300">
-          <span className="text-2xl">📅</span>
-          <span className="text-[9px] font-black mt-1 uppercase tracking-tighter">Viajes</span>
+          {viajes.length === 0 && (
+            <div className="p-20 text-center">
+              <p className="text-gray-400 font-medium">No hay viajes programados por el momento.</p>
+            </div>
+          )}
         </div>
-        <div className="flex flex-col items-center text-gray-300">
-          <span className="text-2xl">👤</span>
-          <span className="text-[9px] font-black mt-1 uppercase tracking-tighter">Perfil</span>
-        </div>
-      </footer>
+      </div>
     </div>
   )
 }

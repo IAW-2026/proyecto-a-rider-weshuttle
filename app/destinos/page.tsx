@@ -3,16 +3,34 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 
-export default async function GestionDestinos() {
+export default async function GestionDestinos({
+  searchParams,
+}: {
+  searchParams: Promise<{ query?: string }>
+}) {
   const { userId } = await auth()
   const user = await currentUser()
 
   // Seguridad: Misma lógica de mail
   const email = user?.emailAddresses[0]?.emailAddress?.toLowerCase()
-  if (email !== 'gulinofranco5@gmail.com') redirect('/')
+  
+  // Leemos el mail desde la variable de entorno
+  const adminEmails = (process.env.ADMIN_EMAIL ?? '').split(',').map((item) => item.trim().toLowerCase())
+  if (!email || !adminEmails.includes(email)) redirect('/')
+
+  // Leemos lo que dice la URL (ej: ?query=facultad)
+  const params = await searchParams;
+  const query = params.query || '';
 
   // Traemos los destinos reales de Neon
-  const destinos = await prisma.destino.findMany()
+  const destinos = await prisma.destino.findMany({
+    where: {
+      nombre: {
+        contains: query,
+        mode: 'insensitive' // Para que no le importe mayúsculas/minúsculas
+      }
+    }
+  })
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 text-black font-sans">
@@ -23,6 +41,25 @@ export default async function GestionDestinos() {
           </Link>
           <h1 className="text-3xl font-black italic mt-2">Gestionar Destinos</h1>
         </header>
+
+        {/* Buscador por URL */}
+        <form method="GET" className="mb-6 flex gap-2">
+          <input 
+            type="text" 
+            name="query" 
+            defaultValue={query}
+            placeholder="Buscar destino por nombre..." 
+            className="flex-1 p-4 rounded-xl border border-gray-200 text-sm font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+          />
+          <button type="submit" className="bg-black text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors shadow-sm">
+            Buscar
+          </button>
+          {query && (
+            <Link href="/destinos" className="bg-red-50 text-red-600 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-colors flex items-center justify-center shadow-sm">
+              Limpiar
+            </Link>
+          )}
+        </form>
 
         <div className="bg-white rounded-[2rem] border border-gray-200 overflow-hidden shadow-sm">
           <table className="w-full text-left border-collapse">
