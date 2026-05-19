@@ -44,6 +44,18 @@ export default async function VistaPublicaViajes() {
           </div>
         </header>
 
+        {/* BOTÓN DE ACCIÓN (Solo para usuarios logueados) */}
+        {userId && (
+          <div className="mb-10 flex flex-col md:flex-row gap-4">
+            <Link href="/reservar" className="flex-1 block bg-blue-600 text-white text-center py-5 rounded-2xl font-black uppercase tracking-widest shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all hover:-translate-y-1">
+              🎟️ Reservar Asiento
+            </Link>
+            <Link href="/mis-viajes" className="flex-1 block bg-white border border-gray-200 text-black text-center py-5 rounded-2xl font-black uppercase tracking-widest shadow-sm hover:bg-gray-50 hover:shadow-md transition-all hover:-translate-y-1">
+              🎫 Mis Viajes
+            </Link>
+          </div>
+        )}
+
         {/* TABLA DE VIAJES PÚBLICA */}
         <div className="bg-white rounded-[2rem] border border-gray-200 overflow-hidden shadow-sm">
           <table className="w-full text-left border-collapse">

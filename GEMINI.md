@@ -1,46 +1,78 @@
-# 🗺️ WeShuttle Context: Rider App 
+# 🛸 WeShuttle: Documentación Técnica de Rider App
 
-Este archivo define la lógica, el stack y los contratos de API de la **Rider App**. Es la fuente de verdad para la gestión de pasajeros y reservas.
+## 📝 Descripción General
+La **Rider App** es el componente central para la experiencia del pasajero en el ecosistema WeShuttle. Su responsabilidad principal es la gestión del ciclo de vida de las **Reservas**, el mantenimiento de la inmutabilidad de los datos comerciales y la sincronización en tiempo real con el resto de los microservicios.
 
-## 🛠️ Stack & Infra
-- **Framework:** Next.js (App Router) + Turbopack.
-- **Auth:** Clerk (Admin: `gulinofranco5@gmail.com`).
-- **DB:** PostgreSQL (Neon) + Prisma ORM.
+---
 
-## 🔌 Contratos de API (Endpoints que YO expongo)
-Mi app es el servidor para otros servicios. Estos son los contratos que debo respetar:
+## 🏗️ Arquitectura del Sistema
+WeShuttle funciona bajo una arquitectura de microservicios distribuidos:
 
-### 1. Manifiesto de Pasajeros (`GET /api/pools/:pool_id/passengers`)
-- **Uso:** Lo llama la Driver App (Marketplace/Viaje), Payments (Cobro) y Feedback (Ratings).
-- **Filtro Clave:** `?status=PAID` para el manifiesto final del chofer.
-- **Regla:** Si no hay nadie, devuelvo `[]`.
+| Aplicación | Responsabilidad Principal |
+| :--- | :--- |
+| **Rider App** | Usuarios finales, Gestión de Reservas e Historial. |
+| **Driver App** | Gestión de Pools, Marketplace de conductores y Vehículos. |
+| **Payments App** | Cotizaciones, Cobro automático y Liquidación. |
+| **Feedback App** | Sistema de reseñas y reputación (estrellas). |
 
-### 2. Cancelación por falta de Chofer (`POST /api/pools/:pool_id/cancellations`)
-- **Origen:** Driver App me avisa que nadie aceptó el viaje.
-- **Acción:** Debo pasar mis reservas a `CANCELED` y notificar al usuario.
+---
 
-### 3. Resultado de Pago (`PATCH /api/reservations/:reservation_id/payment-result`)
-- **Origen:** Payments App me confirma si hubo plata o no.
-- **Acción:** Si es `PAID`, guardo el `effective_price`. Si es `DENIED`, queda en null.
+## 🔄 Flujo de Trabajo (Workflow)
 
-### 4. Aviso de Reseña (`POST /api/notifications/feedback`)
-- **Origen:** Feedback App me avisa que el viaje terminó.
-- **Acción:** Debo mostrarle al pasajero que ya puede calificar al chofer.
+### 1. Reserva y Cotización
+* El pasajero selecciona **Destino** y **Horario**.
+* La Rider App consulta a la Driver App por pools existentes para optimizar la ocupación.
+* La Payments App devuelve el **Precio Máximo** (Snapshot inmutable) y el **Precio Estimado**.
+* Si el pool ya tiene conductor, se integra su información y calificaciones desde Feedback App.
 
-## 📊 Modelo de Datos (Prisma)
-- **Pasajeros:** - `clerk_user_id` (PK), `company_code` (Validación industrial).
+### 2. Estados de la Reserva (`status`)
+La entidad `reservation` transiciona por los siguientes estados clave:
 
-- **Destinos:** - `id`, `nombre` (Polo, Puerto, etc.), `ubicacion_lat_long`.
+* `PENDING_DRIVER`: Reserva creada, a la espera de un conductor en la Driver App.
+* `CONFIRMED`: El pool ya cuenta con un conductor asignado.
+* `PAID`: El cobro automático fue exitoso (se ejecuta en T-1h).
+* `DENIED`: El pago fue rechazado por la pasarela; el pasajero pierde su lugar.
+* `CANCELED`: Cancelación por parte del usuario o del sistema (ej. falta de conductor).
 
-- **Reservas (Inmutable):** - `id`, `clerk_user_id` (FK), `pool_id` (ID externo).
-  - `punto_de_partida`: Dirección de origen del rider.
-  - `destino_id`: Relación actual con la tabla Destinos.
-  - `horario`: Fecha/Hora del viaje.
-  - **Snapshots Comerciales:** `destino_snapshot` y `horario_snapshot` (Para que la reserva no cambie si el destino se edita a futuro).
-  - **Precios:** `max_price` (Snapshot al crear) y `effective_price` (Post-cobro).
-  - **Estados:** `INICIADA`, `CONFIRMADA`, `PAGADA`, `CANCELADA`.
+### 3. Cierre y Cobro Automático (T-1h)
+Una hora antes de la partida, la Driver App bloquea el pool (`LOCKED`). La Payments App solicita el **Manifiesto de Pasajeros** a la Rider App. El precio final real (`effective_price`) se registra tras la confirmación del pago.
+
+---
+
+## 📊 Modelo de Datos (Prisma Schema)
+
+### 👥 Pasajeros (`passengers`)
+* `id`: UUID interno único.
+* `clerk_user_id`: Identificador de autenticación (Clerk).
+* `status`: Estado del usuario (`ACTIVE`, `INACTIVE`, `BLOCKED`).
+
+### 📍 Destinos (`destinations`)
+* `id`: UUID.
+* `name`: Nombre del destino industrial (ej. Polo Petroquímico).
+* `lat / lng`: Coordenadas precisas para el punto de llegada.
+* `active`: Booleano para disponibilidad de reservas.
+
+### 🎟️ Reservas (`reservations`)
+Entidad crítica que garantiza la integridad de la transacción.
+* **Snapshots de Inmutabilidad:**
+    * `max_price`: Límite superior de cobro informado al usuario.
+    * `assigned_driver_snapshot`: JSON con datos de conductor y vehículo en el momento de la asignación.
+* **Datos Financieros:**
+    * `effective_price`: Monto real debitado de la cuenta del pasajero.
+    * `payment_transaction_id`: ID único de la transacción en la Payments App.
+* **Atributos Operativos:**
+    * `pool_id`: Referencia externa al pool en la Driver App.
+    * `pickup_address`: Dirección exacta de recogida.
+
+### 🔔 Notificaciones (`passenger_notifications`)
+Sistema de persistencia para el historial de eventos del usuario.
+* `type`: Categoría del evento (`TRIP_STARTED`, `DRIVER_ARRIVED`, `PAYMENT_DENIED`).
+* `read_at`: Control de visualización para el frontend.
+
+---
 
 ## 🛡️ Reglas de Negocio Críticas
-1. **Inmutabilidad:** Una vez creada la reserva, el `max_price` no se toca.
-2. **Seguridad:** Solo el mail admin puede acceder a `/admin` para gestionar destinos.
-3. **Filtro de Seguridad:** En el `.gitignore` DEBEN estar `.env`, `.env.local` y `.clerk/`.
+1. **Inmutabilidad Absoluta:** No se permiten ediciones sobre reservas confirmadas. Cualquier cambio de destino o fecha requiere la **cancelación y creación de una nueva reserva**.
+2. **Propiedad del Manifiesto:** La Rider App es la fuente de verdad de la lista de pasajeros. Driver App consume esta información para el recorrido del chofer.
+3. **Polling y Sincronización:** La Rider App debe consultar activamente el estado del pool para informar \"Hitos\" (ej: *\"El conductor llegó a tu ubicación\"*).
+4. **Habilitación de Reseñas:** El flujo de feedback solo se activa para reservas en estado `PAID` una vez que el pool llega a `COMPLETED`."""
