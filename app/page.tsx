@@ -10,7 +10,7 @@ export default async function VistaPublicaViajes() {
   // 1. Traemos los viajes REALES de la base de datos Neon 
   const viajes = await prisma.pool.findMany({
     orderBy: {
-      fecha_viaje: 'desc'
+      fecha_viaje: 'asc' // 'asc' muestra primero las combis más próximas a salir
     }
   })
 

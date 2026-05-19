@@ -43,6 +43,7 @@ export default async function NuevaReservaPage() {
     'use server'
     const destino_id = formData.get('destino_id') as string
     const horario = formData.get('horario') as string
+    const punto_partida = formData.get('punto_partida') as string
 
     // Buscamos al usuario de Clerk RECIÉN cuando se ejecuta la acción
     const { userId: actionUserId } = await auth()
@@ -71,7 +72,7 @@ export default async function NuevaReservaPage() {
         clerk_user_id: actionUserId,
         destino_id: destino_id,
         horario: new Date(horario),
-        punto_de_partida: 'Bahía Blanca (Centro)',
+        punto_de_partida: punto_partida,
         estado_reserva: 'PENDING_DRIVER',
         precio_maximo: paymentsData.max_price, // Guardamos el Snapshot del precio!
         pool_id: driverData.pool_id // Lo asociamos a la combi de la Driver App!
@@ -106,6 +107,10 @@ export default async function NuevaReservaPage() {
           <div>
             <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">¿A qué hora?</label>
             <input type="datetime-local" name="horario" required className="w-full p-4 rounded-xl border border-gray-200 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+          </div>
+          <div>
+            <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">¿Por dónde te buscamos?</label>
+            <input type="text" name="punto_partida" placeholder="Ej: Sarmiento 850, Bahía Blanca" required className="w-full p-4 rounded-xl border border-gray-200 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
           <button type="submit" className="w-full bg-black text-white text-xs font-black uppercase tracking-[0.2em] py-5 rounded-2xl hover:bg-blue-600 transition-colors shadow-md mt-4">Confirmar Reserva</button>
         </form>

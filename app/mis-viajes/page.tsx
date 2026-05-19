@@ -14,8 +14,17 @@ export default async function MisViajesPage() {
   const reservas = await prisma.reserva.findMany({
     where: { clerk_user_id: userId },
     include: { destino: true },
-    orderBy: { horario: 'desc' }
+    orderBy: { horario: 'asc' } // 'asc' ordena desde el más cercano al más lejano en el tiempo
   })
+
+  const ahora = new Date()
+  // 1. VIAJES ACTIVOS: Futuros y no cancelados
+  const viajesActivos = reservas.filter(r => r.horario >= ahora && r.estado_reserva !== 'CANCELED')
+  
+  // 2. HISTORIAL: Pasados o cancelados (Los damos vuelta para que el más reciente quede arriba)
+  const historial = reservas
+    .filter(r => r.horario < ahora || r.estado_reserva === 'CANCELED')
+    .sort((a, b) => b.horario.getTime() - a.horario.getTime())
 
   // --- SERVER ACTION: Cancelar Reserva ---
   async function cancelarReserva(formData: FormData) {
@@ -61,8 +70,14 @@ export default async function MisViajesPage() {
           <p className="text-gray-500 text-sm mt-1">Acá podés ver el estado de tus reservas.</p>
         </header>
 
-        <div className="grid gap-6">
-          {reservas.map((reserva) => (
+        <div className="space-y-12">
+          {/* --- SECCIÓN 1: VIAJES ACTIVOS --- */}
+          <section>
+            <h2 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Próximos Viajes
+            </h2>
+            <div className="grid gap-6">
+          {viajesActivos.map((reserva) => (
             <div key={reserva.id} className="bg-white p-6 rounded-[2rem] border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
                 {reserva.estado_reserva === 'CANCELED' && (
@@ -128,7 +143,7 @@ export default async function MisViajesPage() {
             </div>
           ))}
 
-          {reservas.length === 0 && (
+          {viajesActivos.length === 0 && (
             <div className="bg-white p-12 rounded-[3rem] border border-gray-200 text-center">
               <span className="text-4xl mb-4 block">🎫</span>
               <h3 className="text-lg font-bold mb-2">No tenés viajes activos</h3>
@@ -137,6 +152,43 @@ export default async function MisViajesPage() {
                 Hacer mi primera reserva
               </Link>
             </div>
+          )}
+            </div>
+          </section>
+
+          {/* --- SECCIÓN 2: HISTORIAL --- */}
+          {historial.length > 0 && (
+            <section>
+              <h2 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Historial de Viajes</h2>
+              <div className="grid gap-6 opacity-60 hover:opacity-100 transition-opacity">
+                {historial.map((reserva) => (
+                  <div key={reserva.id} className="bg-gray-100 p-6 rounded-[2rem] border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                      {reserva.estado_reserva === 'CANCELED' && (
+                        <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 bg-red-100 text-red-700">Cancelado ❌</span>
+                      )}
+                      {reserva.estado_reserva === 'PAID' && (
+                        <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 bg-blue-100 text-blue-700">Viaje Finalizado ✅</span>
+                      )}
+                      <h3 className="text-lg font-bold text-gray-700">{reserva.destino.nombre}</h3>
+                      <p className="text-sm text-gray-500 mt-1">📅 {new Date(reserva.horario).toLocaleString('es-AR')}</p>
+                      <p className="text-xs text-gray-400 mt-1">📍 Salida: {reserva.punto_de_partida}</p>
+                      
+                      {reserva.precio_maximo && (
+                        <p className="text-sm font-black text-gray-600 mt-3 bg-white inline-block px-3 py-1 rounded-lg border border-gray-200">
+                          💰 Total: ${reserva.precio_maximo.toLocaleString('es-AR')}
+                        </p>
+                      )}
+                    </div>
+                    <div className="w-full md:w-auto">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                        Archivado
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
           )}
         </div>
       </div>
