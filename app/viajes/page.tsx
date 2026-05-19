@@ -8,18 +8,14 @@ import Link from 'next/link'
 
   // --- MOCK DE API EXTERNA (Driver App) --- //
   async function fetchDriverAppMock() {
-    // 1. Request HTTP REAL a API externa para cumplir la rúbrica obligatoria
-    const randomId = Math.floor(Math.random() * 10) + 1; // Un ID del 1 al 10
-    const res = await fetch(`https://jsonplaceholder.typicode.com/users/${randomId}`);
-    const externalData = await res.json();
-
-    // 2. Retornamos el JSON simulado de tu compañero, pero inyectando el dato real
+    // Simulamos la respuesta oficial del contrato: GET /api/pools/:pool_id/assigned-driver
+    // En el futuro, esto será un fetch() real a la app de tu compañero.
     return {
-      "pool_id": `pool_abc${externalData.id}`,
+      "pool_id": "pool_abc123",
       "pool_status": "ASSIGNED",
       "driver": {
-        "driver_user_id": `user_driver_0${externalData.id}`,
-        "full_name": `${externalData.name} (API Mock)` // Usamos el nombre real traído de la API
+        "driver_user_id": "user_driver_01",
+        "full_name": "Juliana Pagani" // Dato del contrato oficial
       },
       "vehicle": {
         "vehicle_id": "veh_123",
