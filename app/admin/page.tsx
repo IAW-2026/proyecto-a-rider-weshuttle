@@ -34,9 +34,9 @@ export default async function AdminPanel() {
               🚐
             </div>
             <h3 className="text-xl font-black italic">Logística de Viajes</h3>
-            <p className="text-gray-400 text-sm mt-2 mb-8 leading-relaxed">Panel para gestionar combis, conductores y estados del viaje (CRUD).</p>
-            <Link href="/viajes" className="block w-full text-center bg-black text-white text-[10px] font-black uppercase tracking-[0.2em] py-5 rounded-2xl group-hover:bg-green-600 transition-colors">
-              Abrir CRUD
+            <p className="text-gray-400 text-sm mt-2 mb-8 leading-relaxed">Crear, editar y cancelar viajes.</p>
+            <Link href="/viajes" className="block w-full text-center bg-black text-white text-[10px] font-black uppercase tracking-[0.2em] py-4 rounded-2xl group-hover:bg-green-600 transition-colors">
+              Gestionar Viajes
             </Link>
           </div>
 
@@ -45,10 +45,10 @@ export default async function AdminPanel() {
             <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:bg-blue-600 transition-colors">
               📍
             </div>
-            <h3 className="text-xl font-black italic">Ver Destinos</h3>
-            <p className="text-gray-400 text-sm mt-2 mb-8 leading-relaxed">Listado de paradas fijas. No requiere edición constante.</p>
-            <Link href="/destinos" className="block w-full text-center bg-black text-white text-[10px] font-black uppercase tracking-[0.2em] py-5 rounded-2xl group-hover:bg-blue-600 transition-colors">
-              Ver Listado
+            <h3 className="text-xl font-black italic">Gestión de Destinos</h3>
+            <p className="text-gray-400 text-sm mt-2 mb-8 leading-relaxed">Actualizar nombres y coordenadas de las paradas.</p>
+            <Link href="/destinos" className="block w-full text-center bg-black text-white text-[10px] font-black uppercase tracking-[0.2em] py-4 rounded-2xl group-hover:bg-blue-600 transition-colors">
+              Gestionar Destinos
             </Link>
           </div>
         </div>

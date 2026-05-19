@@ -1,7 +1,22 @@
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
+
+// --- SERVER ACTIONS --- //
+async function actualizarDestino(formData: FormData) {
+  'use server'
+  const id = formData.get('id') as string
+  const nombre = formData.get('nombre') as string
+  const ubicacion_lat_long = formData.get('ubicacion') as string
+
+  await prisma.destino.update({
+    where: { id },
+    data: { nombre, ubicacion_lat_long }
+  })
+  revalidatePath('/destinos')
+}
 
 export default async function GestionDestinos({
   searchParams,
@@ -73,11 +88,18 @@ export default async function GestionDestinos({
             <tbody>
               {destinos.map((destino) => (
                 <tr key={destino.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                  <td className="p-6 font-bold text-sm">{destino.nombre}</td>
-                  <td className="p-6 text-xs text-gray-500 font-mono">{destino.ubicacion_lat_long}</td>
-                  <td className="p-6 text-right">
-                    <button className="text-[10px] font-black uppercase bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-600 hover:text-white transition-all">
-                      Eliminar
+                  <td className="p-4">
+                    <form id={`form-${destino.id}`} action={actualizarDestino} className="hidden">
+                      <input type="hidden" name="id" value={destino.id} />
+                    </form>
+                    <input form={`form-${destino.id}`} name="nombre" defaultValue={destino.nombre} className="w-full p-3 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:border-blue-500" required />
+                  </td>
+                  <td className="p-4">
+                    <input form={`form-${destino.id}`} name="ubicacion" defaultValue={destino.ubicacion_lat_long} className="w-full p-3 border border-gray-200 rounded-xl text-xs font-mono outline-none focus:border-blue-500" required />
+                  </td>
+                  <td className="p-4 text-right">
+                    <button form={`form-${destino.id}`} type="submit" className="text-[10px] font-black uppercase bg-blue-50 text-blue-600 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all">
+                      Guardar
                     </button>
                   </td>
                 </tr>

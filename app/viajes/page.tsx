@@ -108,7 +108,7 @@ export default async function GestionViajes({
             ← Volver al Panel
           </Link>
           <h1 className="text-3xl font-black italic mt-2">Logística de Viajes (CRUD)</h1>
-          <p className="text-gray-500 text-sm mt-1">Gestioná las combis, conductores y estados del viaje.</p>
+          <p className="text-gray-500 text-sm mt-1">Administrá las combis y los estados.</p>
         </header>
 
         {/* FORMULARIO CREATE CON API */}
@@ -116,7 +116,7 @@ export default async function GestionViajes({
           <div>
             <h2 className="text-sm font-black uppercase tracking-widest text-gray-800 mb-2">Asignar Viaje (API Mock)</h2>
             <p className="text-xs text-gray-500 max-w-lg leading-relaxed">
-              En lugar de escribir los datos a mano, este botón consume la API de prueba para simular la asignación de un conductor desde la <b>Driver App</b>, usando el JSON exacto de tu compañero.
+              Crea un viaje y simula la asignación de un conductor consumiendo la API de la <b>Driver App</b>.
             </p>
           </div>
           <form action={crearViajeAPI}>
