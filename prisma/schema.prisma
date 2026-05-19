@@ -4,7 +4,15 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // Borramos la línea de url = env(...) porque ahora manda el prisma.config.ts
+}
+
+// Enumerado de estados según tus responsabilidades
+enum EstadoReserva {
+  PENDING_DRIVER
+  CONFIRMED
+  PAID
+  DENIED
+  CANCELED
 }
 
 model Pasajero {
@@ -12,18 +20,22 @@ model Pasajero {
   nombre         String?
   email          String? @unique
   rol            String  @default("RIDER")
-  company_code   String?
+  company_code   String? 
   reservas       Reserva[]
 }
 
 model Reserva {
   id                String      @id @default(cuid())
   clerk_user_id      String
-  pool_id            String
-  estado_reserva    String
+  pool_id            String?     // ID externo de la Driver App (opcional hasta asignación)
+  estado_reserva    EstadoReserva @default(PENDING_DRIVER)
   punto_de_partida  String
   destino_id        String
   horario            DateTime
+  destino_snapshot   String?     // Snapshot comercial
+  horario_snapshot   DateTime?   // Snapshot comercial
+  precio_maximo      Float?      // Precio informado al reservar
+  precio_efectivo    Float?      // Precio final pagado
 
   pasajero          Pasajero    @relation(fields: [clerk_user_id], references: [clerk_user_id])
   destino           Destino     @relation(fields: [destino_id], references: [id])
@@ -34,4 +46,12 @@ model Destino {
   nombre            String
   ubicacion_lat_long String
   reservas          Reserva[]
+}
+
+model Pool {
+  id               String   @id @default(cuid())
+  conductor_nombre String
+  vehiculo_patente String
+  estado           String   @default("Programado")
+  fecha_viaje      DateTime @default(now())
 }
