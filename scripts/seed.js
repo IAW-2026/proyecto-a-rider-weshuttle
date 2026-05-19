@@ -1,29 +1,47 @@
-import { config } from 'dotenv'
-import { PrismaClient } from '@prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
+const { config } = require('dotenv')
+const { PrismaClient } = require('@prisma/client')
+const { Pool } = require('pg')
+const { PrismaPg } = require('@prisma/adapter-pg')
 
 // Cargar variables de entorno
 config({ path: '.env.local' })
 
-const prismaAdapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+const prismaAdapter = new PrismaPg(pool)
 
 const prisma = new PrismaClient({
   adapter: prismaAdapter,
   log: ['query'],
 })
 
-async function clearData() {
-  console.log('🧹 Limpiando destinos de la base de datos...')
+async function main() {
+  console.log('🧹 Limpiando base de datos (Destinos y Reservas)...')
 
+  await prisma.reserva.deleteMany()
   const deletedCount = await prisma.destino.deleteMany()
-
   console.log(`✅ Eliminados ${deletedCount.count} destinos`)
-  console.log('🗑️ Base de datos limpia!')
+
+  console.log('🌱 Inyectando destinos predeterminados...')
+  
+  const destinos = await Promise.all([
+    prisma.destino.create({
+      data: { nombre: 'Polo Petroquímico', ubicacion_lat_long: '-38.7964, -62.2694' }
+    }),
+    prisma.destino.create({
+      data: { nombre: 'Puerto de Ingeniero White', ubicacion_lat_long: '-38.7842, -62.2667' }
+    }),
+    prisma.destino.create({
+      data: { nombre: 'Parque Industrial', ubicacion_lat_long: '-38.7753, -62.2709' }
+    })
+  ])
+
+  console.log('✅ ¡Destinos creados exitosamente!')
+  destinos.forEach(d => {
+    console.log(`  📍 ${d.nombre} (${d.ubicacion_lat_long})`)
+  })
 }
 
-clearData()
+main()
   .catch((e) => {
     console.error('❌ Error:', e)
     process.exit(1)
