@@ -76,6 +76,7 @@ export default async function VistaPublicaViajes() {
           )}
         </div>
       </div>
+
     </div>
   )
 }
