@@ -18,6 +18,7 @@ async function main() {
   console.log('🧹 Limpiando base de datos (Destinos y Reservas)...')
 
   await prisma.reserva.deleteMany()
+  await prisma.pool.deleteMany()
   const deletedCount = await prisma.destino.deleteMany()
   console.log(`✅ Eliminados ${deletedCount.count} destinos`)
 
