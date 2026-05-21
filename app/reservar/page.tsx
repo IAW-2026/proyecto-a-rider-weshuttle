@@ -50,6 +50,12 @@ export default async function NuevaReservaPage() {
     const user = await currentUser()
     if (!actionUserId || !user) return
 
+    // Validamos que la fecha no sea en el pasado (Protección Backend)
+    const fechaViaje = new Date(horario)
+    if (fechaViaje < new Date()) {
+      throw new Error("Error de seguridad: La fecha del viaje no puede estar en el pasado.")
+    }
+
     // 1. Consultamos a las APIs amigas (Mocks por ahora)
     const paymentsData = await fetchPaymentsAppMock()
     const driverData = await fetchDriverAppPoolMock()
@@ -83,6 +89,9 @@ export default async function NuevaReservaPage() {
     redirect('/mis-viajes')
   }
 
+  // Calculamos la fecha actual en formato YYYY-MM-DDThh:mm para bloquear el calendario en la UI
+  const minDateTime = new Date().toISOString().slice(0, 16)
+
   return (
     <div className="min-h-screen bg-gray-50 p-8 text-black font-sans flex flex-col items-center justify-center">
       <div className="w-full max-w-md bg-white p-8 rounded-[2rem] border border-gray-200 shadow-sm">
@@ -106,7 +115,7 @@ export default async function NuevaReservaPage() {
           </div>
           <div>
             <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">¿A qué hora?</label>
-            <input type="datetime-local" name="horario" required className="w-full p-4 rounded-xl border border-gray-200 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+            <input type="datetime-local" name="horario" min={minDateTime} required className="w-full p-4 rounded-xl border border-gray-200 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
           <div>
             <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">¿Por dónde te buscamos?</label>

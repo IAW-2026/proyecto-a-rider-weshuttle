@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { auth } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 import { UserButton } from "@clerk/nextjs"
 
 // Esta página NO es estática, se recarga con la base de datos
@@ -16,6 +16,9 @@ export default async function VistaPublicaViajes() {
 
   // 2. Verificamos si hay un usuario logueado
   const { userId } = await auth()
+  const user = await currentUser()
+  
+  const isAdmin = user?.emailAddresses[0]?.emailAddress === process.env.ADMIN_EMAIL
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 text-black font-sans">
@@ -31,9 +34,11 @@ export default async function VistaPublicaViajes() {
             {/* Si está logueado mostramos el botón de admin, sino el de ingresar */}
             {userId ? (
               <>
-                <Link href="/admin" className="text-[10px] font-bold uppercase text-blue-600 hover:underline">
-                  Panel Admin
-                </Link>
+                {isAdmin && (
+                  <Link href="/admin" className="text-[10px] font-bold uppercase text-blue-600 hover:underline">
+                    Panel Admin
+                  </Link>
+                )}
                 <UserButton />
               </>
             ) : (
