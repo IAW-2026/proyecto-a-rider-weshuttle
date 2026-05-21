@@ -69,9 +69,20 @@ export default async function MisViajesPage({
   async function simularConfirmacion(formData: FormData) {
     'use server'
     const id = formData.get('reserva_id') as string
+
+    // Simulamos los datos que nos devolvería la Driver App al asignar una combi
+    const mockDriverSnapshot = {
+      nombre: "Carlos Gómez",
+      patente: "AF 123 CD",
+      vehiculo: "Mercedes Benz Sprinter"
+    }
+
     await prisma.reserva.update({
       where: { id },
-      data: { estado_reserva: 'CONFIRMED' }
+      data: { 
+        estado_reserva: 'CONFIRMED',
+        assigned_driver_snapshot: mockDriverSnapshot
+      }
     })
     revalidatePath('/mis-viajes')
   }
@@ -111,9 +122,6 @@ export default async function MisViajesPage({
                 {reserva.estado_reserva === 'CANCELED' && (
                   <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 bg-red-50 text-red-600">Cancelado ❌</span>
                 )}
-                {reserva.estado_reserva === 'DENIED' && (
-                  <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 bg-red-50 text-red-600">Pago Rechazado ⚠️</span>
-                )}
                 {reserva.estado_reserva === 'PENDING_DRIVER' && (
                   <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 bg-yellow-50 text-yellow-600">Buscando Conductor 🔍</span>
                 )}
@@ -132,6 +140,14 @@ export default async function MisViajesPage({
                     💰 Total estimado: ${reserva.precio_maximo.toLocaleString('es-AR')}
                   </p>
                 )}
+
+                {reserva.assigned_driver_snapshot && (
+                  <div className="mt-3 bg-gray-50 border border-gray-200 p-3 rounded-xl text-xs">
+                    <p className="font-bold text-gray-700">🚐 Conductor Asignado:</p>
+                    <p className="text-gray-600">{(reserva.assigned_driver_snapshot as any).nombre} - {(reserva.assigned_driver_snapshot as any).vehiculo} ({(reserva.assigned_driver_snapshot as any).patente})</p>
+                  </div>
+                )}
+
                 {reserva.pool_id && (
                   <p className="text-[10px] text-gray-400 font-mono mt-2 uppercase tracking-widest">
                     ID Viaje: {reserva.pool_id}
@@ -150,12 +166,14 @@ export default async function MisViajesPage({
                   </form>
                 )}
                 {reserva.estado_reserva === 'CONFIRMED' && (
-                  <form action={simularPago}>
-                    <input type="hidden" name="reserva_id" value={reserva.id} />
-                    <button type="submit" className="w-full bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-lg hover:bg-blue-600 hover:text-white transition-colors shadow-sm">
-                      🛠️ Simular Pago
-                    </button>
-                  </form>
+                  <div className="flex flex-col gap-2 w-full">
+                    <form action={simularPago}>
+                      <input type="hidden" name="reserva_id" value={reserva.id} />
+                      <button type="submit" className="w-full bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-lg hover:bg-blue-600 hover:text-white transition-colors shadow-sm">
+                        🛠️ Simular Pago
+                      </button>
+                    </form>
+                  </div>
                 )}
 
                 {/* Solo permitimos cancelar si el viaje todavía no se pagó */}
@@ -207,11 +225,24 @@ export default async function MisViajesPage({
                           💰 Total: ${reserva.precio_maximo.toLocaleString('es-AR')}
                         </p>
                       )}
+
+                      {reserva.assigned_driver_snapshot && (
+                        <div className="mt-3 bg-white/50 border border-gray-200 p-3 rounded-xl text-xs">
+                          <p className="font-bold text-gray-700">🚐 Viajaste con:</p>
+                          <p className="text-gray-600">{(reserva.assigned_driver_snapshot as any).nombre} - {(reserva.assigned_driver_snapshot as any).vehiculo} ({(reserva.assigned_driver_snapshot as any).patente})</p>
+                        </div>
+                      )}
                     </div>
                     <div className="w-full md:w-auto">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                        Archivado
-                      </span>
+                      {reserva.estado_reserva === 'PAID' ? (
+                        <button type="button" title="Próximamente: Sistema de Reseñas" className="bg-yellow-50 text-yellow-600 border border-yellow-200 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-yellow-100 transition-colors shadow-sm cursor-pointer whitespace-nowrap">
+                          ⭐ Calificar Viaje
+                        </button>
+                      ) : (
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                          Archivado
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
