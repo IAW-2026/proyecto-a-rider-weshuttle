@@ -6,25 +6,53 @@ import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
-export default async function MisViajesPage() {
+export default async function MisViajesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const { userId } = await auth()
   if (!userId) redirect('/sign-in')
 
-  // Traer reservas del usuario actual, incluyendo el nombre del destino
-  const reservas = await prisma.reserva.findMany({
-    where: { clerk_user_id: userId },
-    include: { destino: true },
-    orderBy: { horario: 'asc' } // 'asc' ordena desde el más cercano al más lejano en el tiempo
-  })
-
   const ahora = new Date()
-  // 1. VIAJES ACTIVOS: Futuros y no cancelados
-  const viajesActivos = reservas.filter(r => r.horario >= ahora && r.estado_reserva !== 'CANCELED')
+  const ITEMS_PER_PAGE = 5 // Mostramos 5 viajes por página en el historial
   
-  // 2. HISTORIAL: Pasados o cancelados (Los damos vuelta para que el más reciente quede arriba)
-  const historial = reservas
-    .filter(r => r.horario < ahora || r.estado_reserva === 'CANCELED')
-    .sort((a, b) => b.horario.getTime() - a.horario.getTime())
+  // Leer el número de página desde la URL (ej: ?page=2)
+  const params = await searchParams;
+  const pageParam = params?.page;
+  const currentPage = Number(Array.isArray(pageParam) ? pageParam[0] : pageParam) || 1
+  const skip = (currentPage - 1) * ITEMS_PER_PAGE
+
+  // 1. VIAJES ACTIVOS (Buscamos directo en la BD solo los futuros y no cancelados)
+  const viajesActivos = await prisma.reserva.findMany({
+    where: { clerk_user_id: userId, estado_reserva: { not: 'CANCELED' }, horario: { gte: ahora } },
+    include: { destino: true },
+    orderBy: { horario: 'asc' }
+  })
+  
+  // 2. HISTORIAL PAGINADO (Buscamos directo en la BD los pasados o cancelados)
+
+  // Ejecutamos la búsqueda y el conteo total al mismo tiempo para que sea más rápido
+  const [historial, totalHistorial] = await Promise.all([
+    prisma.reserva.findMany({ 
+      where: {
+        clerk_user_id: userId,
+        OR: [{ horario: { lt: ahora } }, { estado_reserva: 'CANCELED' }]
+      }, 
+      include: { destino: true }, 
+      orderBy: { horario: 'desc' }, 
+      take: ITEMS_PER_PAGE, 
+      skip: skip 
+    }),
+    prisma.reserva.count({ 
+      where: {
+        clerk_user_id: userId,
+        OR: [{ horario: { lt: ahora } }, { estado_reserva: 'CANCELED' }]
+      } 
+    })
+  ])
+
+  const totalPages = Math.ceil(totalHistorial / ITEMS_PER_PAGE)
 
   // --- SERVER ACTION: Cancelar Reserva ---
   async function cancelarReserva(formData: FormData) {
@@ -61,7 +89,7 @@ export default async function MisViajesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 text-black font-sans">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <header className="mb-10">
           <Link href="/" className="text-[10px] font-bold uppercase text-blue-600 hover:underline">
             ← Volver al inicio
@@ -70,9 +98,9 @@ export default async function MisViajesPage() {
           <p className="text-gray-500 text-sm mt-1">Acá podés ver el estado de tus reservas.</p>
         </header>
 
-        <div className="space-y-12">
+        <div className="flex flex-col lg:flex-row gap-12 items-start">
           {/* --- SECCIÓN 1: VIAJES ACTIVOS --- */}
-          <section>
+          <section className="flex-1 w-full">
             <h2 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2">
               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Próximos Viajes
             </h2>
@@ -157,8 +185,8 @@ export default async function MisViajesPage() {
           </section>
 
           {/* --- SECCIÓN 2: HISTORIAL --- */}
-          {historial.length > 0 && (
-            <section>
+          {totalHistorial > 0 && (
+            <section className="flex-1 w-full">
               <h2 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Historial de Viajes</h2>
               <div className="grid gap-6 opacity-60 hover:opacity-100 transition-opacity">
                 {historial.map((reserva) => (
@@ -188,6 +216,35 @@ export default async function MisViajesPage() {
                   </div>
                 ))}
               </div>
+
+              {/* CONTROLES DE PAGINACIÓN */}
+              {totalPages > 1 && (
+                <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+                  <span className="text-xs text-gray-500 font-bold">
+                    Página {currentPage} de {totalPages}
+                  </span>
+                  <div className="flex gap-2">
+                    {currentPage > 1 ? (
+                      <Link href={`/mis-viajes?page=${currentPage - 1}`} className="bg-white border border-gray-200 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-colors shadow-sm">
+                        ⬅️ Anterior
+                      </Link>
+                    ) : (
+                      <button disabled className="bg-gray-100 text-gray-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest opacity-50 cursor-not-allowed">
+                        ⬅️ Anterior
+                      </button>
+                    )}
+                    {currentPage < totalPages ? (
+                      <Link href={`/mis-viajes?page=${currentPage + 1}`} className="bg-white border border-gray-200 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-colors shadow-sm">
+                        Siguiente ➡️
+                      </Link>
+                    ) : (
+                      <button disabled className="bg-gray-100 text-gray-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest opacity-50 cursor-not-allowed">
+                        Siguiente ➡️
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </section>
           )}
         </div>
