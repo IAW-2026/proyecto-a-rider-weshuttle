@@ -3,33 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/app/ui/botones/Button'
-
-// --- MOCKS DE APIs EXTERNAS --- //
-
-async function fetchPaymentsAppMock() {
-  // Simula la respuesta de: GET /api/payments/pricing-estimate
-  return {
-    "currency": "ARS",
-    "max_price": 5000,
-    "estimated_price": 4200,
-    "current_passengers": 5,
-    "pricing_detail": {
-      "base_price": 5000,
-      "estimated_discount": 800,
-      "discount_reason": "OCCUPANCY_DISCOUNT"
-    }
-  }
-}
-
-async function fetchDriverAppPoolMock() {
-  // Simula la respuesta de: POST /api/pools
-  return {
-    "pool_id": `pool_mock_${Math.floor(Math.random() * 1000)}`, // Genera un ID falso aleatorio
-    "status": "AVAILABLE",
-    "current_passengers": 1,
-    "max_capacity": 15
-  }
-}
+import { fetchPaymentsAppMock, fetchDriverAppPoolMock } from '@/lib/api'
 
 export default async function NuevaReservaPage() {
   // Protegemos la página al entrar

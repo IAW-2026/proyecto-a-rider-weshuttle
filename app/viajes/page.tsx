@@ -4,28 +4,9 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { Button } from '@/app/ui/botones/Button'
+import { fetchDriverAppMock } from '@/lib/api'
 
   // --- SERVER ACTIONS PARA EL CRUD --- //
-
-  // --- MOCK DE API EXTERNA (Driver App) --- //
-  async function fetchDriverAppMock() {
-    // Simulamos la respuesta oficial del contrato: GET /api/pools/:pool_id/assigned-driver
-    // En el futuro, esto será un fetch() real a la app de tu compañero.
-    return {
-      "pool_id": "pool_abc123",
-      "pool_status": "ASSIGNED",
-      "driver": {
-        "driver_user_id": "user_driver_01",
-        "full_name": "Juliana Pagani" // Dato del contrato oficial
-      },
-      "vehicle": {
-        "vehicle_id": "veh_123",
-        "brand": "Mercedes-Benz",
-        "model": "Sprinter",
-        "license_plate": "AF123JK"
-      }
-    };
-  }
 
   // CREATE (Crear consumiendo API)
   async function crearViajeAPI() {
