@@ -7,9 +7,24 @@ import Link from 'next/link'
 // --- SERVER ACTIONS --- //
 async function actualizarDestino(formData: FormData) {
   'use server'
+
+  // SEGURIDAD (Backend): Verificamos que quien ejecuta la acción oculta sea realmente un Admin
+  const { userId } = await auth()
+  const user = await currentUser()
+  const email = user?.emailAddresses[0]?.emailAddress?.toLowerCase()
+  const adminEmails = (process.env.ADMIN_EMAIL ?? '').split(',').map((item) => item.trim().toLowerCase())
+  if (!userId || !email || !adminEmails.includes(email)) {
+    throw new Error("Acceso denegado. Solo los administradores pueden modificar destinos.")
+  }
+
   const id = formData.get('id') as string
   const nombre = formData.get('nombre') as string
   const ubicacion_lat_long = formData.get('ubicacion') as string
+
+  // SEGURIDAD (Backend): Validamos que no nos manden destinos vacíos
+  if (!id || !nombre || !ubicacion_lat_long || nombre.trim().length < 3) {
+    throw new Error("Datos inválidos. El nombre del destino y su ubicación son obligatorios.")
+  }
 
   await prisma.destino.update({
     where: { id },
