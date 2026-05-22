@@ -45,15 +45,24 @@ export default async function NuevaReservaPage() {
     const horario = formData.get('horario') as string
     const punto_partida = formData.get('punto_partida') as string
 
+    // SEGURIDAD (Backend): Validamos que los datos no estén vacíos ni sean puros espacios
+    if (!destino_id || !horario || !punto_partida || punto_partida.trim().length < 5) {
+      throw new Error("Datos inválidos. Por favor completá todos los campos correctamente.")
+    }
+
     // Buscamos al usuario de Clerk RECIÉN cuando se ejecuta la acción
     const { userId: actionUserId } = await auth()
     const user = await currentUser()
     if (!actionUserId || !user) return
 
-    // Validamos que la fecha no sea en el pasado (Protección Backend)
-    const fechaViaje = new Date(horario)
-    if (fechaViaje < new Date()) {
-      throw new Error("Error de seguridad: La fecha del viaje no puede estar en el pasado.")
+    // El string de horario viene sin zona horaria. Le avisamos a Node que es hora de Argentina (-03:00)
+    // para que lo valide y lo guarde correctamente en la base de datos.
+    const fechaViaje = new Date(`${horario}-03:00`)
+    // Margen operativo: La reserva debe hacerse con al menos 2 horas de anticipación
+    // (Le damos 5 minutos de gracia por si el usuario tardó en llenar el formulario)
+    const fechaMinima = new Date(Date.now() + 2 * 60 * 60 * 1000 - 5 * 60 * 1000)
+    if (fechaViaje < fechaMinima) {
+      throw new Error("Error de negocio: Las reservas deben realizarse con al menos 2 horas de anticipación.")
     }
 
     // 1. Consultamos a las APIs amigas (Mocks por ahora)
@@ -77,7 +86,7 @@ export default async function NuevaReservaPage() {
       data: {
         clerk_user_id: actionUserId,
         destino_id: destino_id,
-        horario: new Date(horario),
+        horario: fechaViaje, // ¡Usamos la fecha con la zona horaria corregida para que Vercel no la rompa!
         punto_de_partida: punto_partida,
         estado_reserva: 'PENDING_DRIVER',
         precio_maximo: paymentsData.max_price, // Guardamos el Snapshot del precio!
@@ -89,8 +98,11 @@ export default async function NuevaReservaPage() {
     redirect('/mis-viajes')
   }
 
-  // Calculamos la fecha actual en formato YYYY-MM-DDThh:mm para bloquear el calendario en la UI
-  const minDateTime = new Date().toISOString().slice(0, 16)
+  // Calculamos la hora actual en Argentina (UTC-3) para bloquear fechas pasadas en el calendario
+  const ahoraUtc = new Date()
+  // Le restamos 3 horas (por Arg) y le SUMAMOS 2 horas de margen operativo
+  const minArgConMargen = new Date(ahoraUtc.getTime() - 3 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000) 
+  const minDateTime = minArgConMargen.toISOString().slice(0, 16)
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 text-black font-sans flex flex-col items-center justify-center">
@@ -115,11 +127,11 @@ export default async function NuevaReservaPage() {
           </div>
           <div>
             <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">¿A qué hora?</label>
-            <input type="datetime-local" name="horario" min={minDateTime} required className="w-full p-4 rounded-xl border border-gray-200 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+            <input type="datetime-local" name="horario" min={minDateTime} defaultValue={minDateTime} required className="w-full p-4 rounded-xl border border-gray-200 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
           <div>
             <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">¿Por dónde te buscamos?</label>
-            <input type="text" name="punto_partida" placeholder="Ej: Sarmiento 850, Bahía Blanca" required className="w-full p-4 rounded-xl border border-gray-200 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+            <input type="text" name="punto_partida" placeholder="Ej: Sarmiento 850, Bahía Blanca" required minLength={5} maxLength={100} className="w-full p-4 rounded-xl border border-gray-200 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
           <button type="submit" className="w-full bg-black text-white text-xs font-black uppercase tracking-[0.2em] py-5 rounded-2xl hover:bg-blue-600 transition-colors shadow-md mt-4">Confirmar Reserva</button>
         </form>

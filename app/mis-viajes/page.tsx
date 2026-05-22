@@ -57,9 +57,12 @@ export default async function MisViajesPage({
   // --- SERVER ACTION: Cancelar Reserva ---
   async function cancelarReserva(formData: FormData) {
     'use server'
+    // Buscamos el usuario ADENTRO de la acción para que Next.js no se confunda y explote
+    const { userId: actionUserId } = await auth()
     const id = formData.get('reserva_id') as string
-    await prisma.reserva.update({
-      where: { id },
+    // SEGURIDAD: Usamos updateMany para exigir que el id de la reserva coincida con tu usuario
+    await prisma.reserva.updateMany({
+      where: { id: id, clerk_user_id: actionUserId || '' },
       data: { estado_reserva: 'CANCELED' }
     })
     revalidatePath('/mis-viajes')
@@ -132,7 +135,7 @@ export default async function MisViajesPage({
                   <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 bg-blue-50 text-blue-600">Viaje Pagado 💳</span>
                 )}
                 <h3 className="text-lg font-bold">{reserva.destino.nombre}</h3>
-                <p className="text-sm text-gray-500 mt-1">📅 {new Date(reserva.horario).toLocaleString('es-AR')}</p>
+                <p className="text-sm text-gray-500 mt-1">📅 {new Date(reserva.horario).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })} hs</p>
                 <p className="text-xs text-gray-400 mt-1">📍 Salida: {reserva.punto_de_partida}</p>
                 
                 {reserva.precio_maximo && (
@@ -217,7 +220,7 @@ export default async function MisViajesPage({
                         <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 bg-blue-100 text-blue-700">Viaje Finalizado ✅</span>
                       )}
                       <h3 className="text-lg font-bold text-gray-700">{reserva.destino.nombre}</h3>
-                      <p className="text-sm text-gray-500 mt-1">📅 {new Date(reserva.horario).toLocaleString('es-AR')}</p>
+                      <p className="text-sm text-gray-500 mt-1">📅 {new Date(reserva.horario).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })} hs</p>
                       <p className="text-xs text-gray-400 mt-1">📍 Salida: {reserva.punto_de_partida}</p>
                       
                       {reserva.precio_maximo && (

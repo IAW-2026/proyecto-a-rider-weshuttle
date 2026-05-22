@@ -7,9 +7,24 @@ import Link from 'next/link'
 // --- SERVER ACTIONS --- //
 async function actualizarDestino(formData: FormData) {
   'use server'
+
+  // SEGURIDAD (Backend): Verificamos que quien ejecuta la acción oculta sea realmente un Admin
+  const { userId } = await auth()
+  const user = await currentUser()
+  const email = user?.emailAddresses[0]?.emailAddress?.toLowerCase()
+  const adminEmails = (process.env.ADMIN_EMAIL ?? '').split(',').map((item) => item.trim().toLowerCase())
+  if (!userId || !email || !adminEmails.includes(email)) {
+    throw new Error("Acceso denegado. Solo los administradores pueden modificar destinos.")
+  }
+
   const id = formData.get('id') as string
   const nombre = formData.get('nombre') as string
   const ubicacion_lat_long = formData.get('ubicacion') as string
+
+  // SEGURIDAD (Backend): Validamos que no nos manden destinos vacíos
+  if (!id || !nombre || !ubicacion_lat_long || nombre.trim().length < 3) {
+    throw new Error("Datos inválidos. El nombre del destino y su ubicación son obligatorios.")
+  }
 
   await prisma.destino.update({
     where: { id },
@@ -64,7 +79,7 @@ export default async function GestionDestinos({
             name="query" 
             defaultValue={query}
             placeholder="Buscar destino por nombre..." 
-            className="flex-1 p-4 rounded-xl border border-gray-200 text-sm font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+            className="flex-1 p-4 rounded-xl border border-gray-200 text-sm font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
           />
           <button type="submit" className="bg-black text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors shadow-sm">
             Buscar
