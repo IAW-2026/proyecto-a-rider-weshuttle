@@ -29,6 +29,16 @@ import Link from 'next/link'
   // CREATE (Crear consumiendo API)
   async function crearViajeAPI() {
     'use server'
+    
+    // SEGURIDAD: Verificamos que sea Admin
+    const { userId: actionUserId } = await auth()
+    const actionUser = await currentUser()
+    const actionEmail = actionUser?.emailAddresses[0]?.emailAddress?.toLowerCase()
+    const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map((item) => item.trim().toLowerCase())
+    if (!actionUserId || !actionEmail || !adminEmailsList.includes(actionEmail)) {
+      throw new Error("Acceso denegado. Solo administradores.")
+    }
+
     const data = await fetchDriverAppMock();
 
     await prisma.pool.create({
@@ -44,6 +54,16 @@ import Link from 'next/link'
   // UPDATE (Actualizar estado)
   async function actualizarEstado(formData: FormData) {
     'use server'
+    
+    // SEGURIDAD: Verificamos que sea Admin
+    const { userId: actionUserId } = await auth()
+    const actionUser = await currentUser()
+    const actionEmail = actionUser?.emailAddresses[0]?.emailAddress?.toLowerCase()
+    const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map((item) => item.trim().toLowerCase())
+    if (!actionUserId || !actionEmail || !adminEmailsList.includes(actionEmail)) {
+      throw new Error("Acceso denegado. Solo administradores.")
+    }
+
     const id = formData.get('id') as string
     const estado = formData.get('estado') as string
     
@@ -57,6 +77,16 @@ import Link from 'next/link'
   // DELETE LÓGICO (Cancelar)
   async function cancelarViaje(formData: FormData) {
     'use server'
+    
+    // SEGURIDAD: Verificamos que sea Admin
+    const { userId: actionUserId } = await auth()
+    const actionUser = await currentUser()
+    const actionEmail = actionUser?.emailAddresses[0]?.emailAddress?.toLowerCase()
+    const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map((item) => item.trim().toLowerCase())
+    if (!actionUserId || !actionEmail || !adminEmailsList.includes(actionEmail)) {
+      throw new Error("Acceso denegado. Solo administradores.")
+    }
+
     const id = formData.get('id') as string
     
     await prisma.pool.update({
@@ -129,7 +159,7 @@ export default async function GestionViajes({
             name="query" 
             defaultValue={query}
             placeholder="Filtrar por estado (Programado, En camino, Finalizado)..." 
-            className="flex-1 p-4 rounded-xl border border-gray-200 text-sm font-semibold outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all shadow-sm"
+            className="flex-1 p-4 rounded-xl border border-gray-200 text-sm font-bold outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all shadow-sm"
           />
           <button type="submit" className="bg-black text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-colors shadow-sm">
             Buscar

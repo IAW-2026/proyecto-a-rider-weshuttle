@@ -1,5 +1,3 @@
-import { Button } from "../botones/Button";
-
 export const DestinoCard = ({ nombre, ubicacion_lat_long }: { nombre: string, ubicacion_lat_long: string }) => {
   return (
     <button className="w-full text-left group">

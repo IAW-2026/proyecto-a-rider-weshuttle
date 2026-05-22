@@ -79,7 +79,7 @@ export default async function GestionDestinos({
             name="query" 
             defaultValue={query}
             placeholder="Buscar destino por nombre..." 
-            className="flex-1 p-4 rounded-xl border border-gray-200 text-sm font-semibold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+            className="flex-1 p-4 rounded-xl border border-gray-200 text-sm font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
           />
           <button type="submit" className="bg-black text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors shadow-sm">
             Buscar
