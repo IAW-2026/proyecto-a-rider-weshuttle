@@ -2,33 +2,8 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-
-// --- MOCKS DE APIs EXTERNAS --- //
-
-async function fetchPaymentsAppMock() {
-  // Simula la respuesta de: GET /api/payments/pricing-estimate
-  return {
-    "currency": "ARS",
-    "max_price": 5000,
-    "estimated_price": 4200,
-    "current_passengers": 5,
-    "pricing_detail": {
-      "base_price": 5000,
-      "estimated_discount": 800,
-      "discount_reason": "OCCUPANCY_DISCOUNT"
-    }
-  }
-}
-
-async function fetchDriverAppPoolMock() {
-  // Simula la respuesta de: POST /api/pools
-  return {
-    "pool_id": `pool_mock_${Math.floor(Math.random() * 1000)}`, // Genera un ID falso aleatorio
-    "status": "AVAILABLE",
-    "current_passengers": 1,
-    "max_capacity": 15
-  }
-}
+import { Button } from '@/app/ui/botones/Button'
+import { fetchPaymentsAppMock, fetchDriverAppPoolMock } from '@/lib/api'
 
 export default async function NuevaReservaPage() {
   // Protegemos la página al entrar
@@ -133,7 +108,9 @@ export default async function NuevaReservaPage() {
             <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">¿Por dónde te buscamos?</label>
             <input type="text" name="punto_partida" placeholder="Ej: Sarmiento 850, Bahía Blanca" required minLength={5} maxLength={100} className="w-full p-4 rounded-xl border border-gray-200 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
-          <button type="submit" className="w-full bg-black text-white text-xs font-black uppercase tracking-[0.2em] py-5 rounded-2xl hover:bg-blue-600 transition-colors shadow-md mt-4">Confirmar Reserva</button>
+          <Button type="submit" variant="primary" size="xl" className="w-full mt-4 hover:bg-blue-600 shadow-md">
+            Confirmar Reserva
+          </Button>
         </form>
       </div>
     </div>

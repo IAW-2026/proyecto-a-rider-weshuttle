@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
+import { Button } from '@/app/ui/botones/Button'
 
 export const dynamic = 'force-dynamic'
 
@@ -163,18 +164,18 @@ export default async function MisViajesPage({
                 {reserva.estado_reserva === 'PENDING_DRIVER' && (
                   <form action={simularConfirmacion}>
                     <input type="hidden" name="reserva_id" value={reserva.id} />
-                    <button type="submit" className="w-full bg-purple-50 text-purple-600 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-lg hover:bg-purple-600 hover:text-white transition-colors shadow-sm">
+                    <Button type="submit" variant="purple" size="md" className="w-full text-[9px]">
                       🛠️ Simular Asignación
-                    </button>
+                    </Button>
                   </form>
                 )}
                 {reserva.estado_reserva === 'CONFIRMED' && (
                   <div className="flex flex-col gap-2 w-full">
                     <form action={simularPago}>
                       <input type="hidden" name="reserva_id" value={reserva.id} />
-                      <button type="submit" className="w-full bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-lg hover:bg-blue-600 hover:text-white transition-colors shadow-sm">
+                      <Button type="submit" variant="blue" size="md" className="w-full text-[9px]">
                         🛠️ Simular Pago
-                      </button>
+                      </Button>
                     </form>
                   </div>
                 )}
@@ -183,9 +184,9 @@ export default async function MisViajesPage({
                 {['PENDING_DRIVER', 'CONFIRMED'].includes(reserva.estado_reserva) && (
                   <form action={cancelarReserva}>
                     <input type="hidden" name="reserva_id" value={reserva.id} />
-                    <button type="submit" className="w-full md:w-auto bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-xl hover:bg-red-600 hover:text-white transition-colors shadow-sm">
+                    <Button type="submit" variant="red" size="lg" className="w-full md:w-auto">
                       Cancelar Viaje
-                    </button>
+                    </Button>
                   </form>
                 )}
               </div>
@@ -238,9 +239,9 @@ export default async function MisViajesPage({
                     </div>
                     <div className="w-full md:w-auto">
                       {reserva.estado_reserva === 'PAID' ? (
-                        <button type="button" title="Próximamente: Sistema de Reseñas" className="bg-yellow-50 text-yellow-600 border border-yellow-200 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-yellow-100 transition-colors shadow-sm cursor-pointer whitespace-nowrap">
+                        <Button type="button" variant="yellow" size="lg" className="py-3 px-4 w-full md:w-auto whitespace-nowrap" title="Próximamente: Sistema de Reseñas">
                           ⭐ Calificar Viaje
-                        </button>
+                        </Button>
                       ) : (
                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
                           Archivado
@@ -263,18 +264,18 @@ export default async function MisViajesPage({
                         ⬅️ Anterior
                       </Link>
                     ) : (
-                      <button disabled className="bg-gray-100 text-gray-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest opacity-50 cursor-not-allowed">
+                      <Button variant="disabled" size="md" disabled>
                         ⬅️ Anterior
-                      </button>
+                      </Button>
                     )}
                     {currentPage < totalPages ? (
                       <Link href={`/mis-viajes?page=${currentPage + 1}`} className="bg-white border border-gray-200 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-colors shadow-sm">
                         Siguiente ➡️
                       </Link>
                     ) : (
-                      <button disabled className="bg-gray-100 text-gray-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest opacity-50 cursor-not-allowed">
+                      <Button variant="disabled" size="md" disabled>
                         Siguiente ➡️
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>

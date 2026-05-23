@@ -3,28 +3,10 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
+import { Button } from '@/app/ui/botones/Button'
+import { fetchDriverAppMock } from '@/lib/api'
 
   // --- SERVER ACTIONS PARA EL CRUD --- //
-
-  // --- MOCK DE API EXTERNA (Driver App) --- //
-  async function fetchDriverAppMock() {
-    // Simulamos la respuesta oficial del contrato: GET /api/pools/:pool_id/assigned-driver
-    // En el futuro, esto será un fetch() real a la app de tu compañero.
-    return {
-      "pool_id": "pool_abc123",
-      "pool_status": "ASSIGNED",
-      "driver": {
-        "driver_user_id": "user_driver_01",
-        "full_name": "Juliana Pagani" // Dato del contrato oficial
-      },
-      "vehicle": {
-        "vehicle_id": "veh_123",
-        "brand": "Mercedes-Benz",
-        "model": "Sprinter",
-        "license_plate": "AF123JK"
-      }
-    };
-  }
 
   // CREATE (Crear consumiendo API)
   async function crearViajeAPI() {
@@ -99,7 +81,7 @@ import Link from 'next/link'
 export default async function GestionViajes({
   searchParams,
 }: {
-  searchParams: Promise<{ query?: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const { userId } = await auth()
   const user = await currentUser()
@@ -111,7 +93,7 @@ export default async function GestionViajes({
 
   // Leemos el buscador de URL
   const params = await searchParams;
-  const query = params.query || '';
+  const query = typeof params?.query === 'string' ? params.query : '';
 
   // READ (Leer listado con filtro)
   const viajes = await prisma.pool.findMany({
@@ -146,9 +128,9 @@ export default async function GestionViajes({
             </p>
           </div>
           <form action={crearViajeAPI}>
-            <button type="submit" className="bg-violet-600 text-white px-6 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-violet-700 transition-colors shadow-md flex items-center gap-2 w-full sm:w-auto justify-center">
-              <span className="text-lg">⚡</span> Sincronizar Viaje
-            </button>
+            <Button type="submit" variant="violet" size="lg" className="py-4 w-full sm:w-auto">
+              Sincronizar Viaje
+            </Button>
           </form>
         </div>
 
@@ -161,9 +143,9 @@ export default async function GestionViajes({
             placeholder="Filtrar por estado (Programado, En camino, Finalizado)..." 
             className="flex-1 p-4 rounded-xl border border-gray-200 text-sm font-bold outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all shadow-sm"
           />
-          <button type="submit" className="bg-black text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-colors shadow-sm">
+          <Button type="submit" variant="primary" size="lg" className="hover:bg-green-600">
             Buscar
-          </button>
+          </Button>
           {query && (
             <Link href="/viajes" className="bg-red-50 text-red-600 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-colors flex items-center justify-center shadow-sm">
               Limpiar
@@ -196,17 +178,17 @@ export default async function GestionViajes({
                         <option value="En camino">En camino</option>
                         <option value="Finalizado">Finalizado</option>
                       </select>
-                      <button type="submit" className="text-[9px] bg-black text-white px-3 py-2 rounded-lg font-bold uppercase hover:bg-gray-800 transition-colors">
+                      <Button type="submit" variant="primary" size="sm">
                         Guardar
-                      </button>
+                      </Button>
                     </form>
                   </td>
                   <td className="p-6 text-right">
                     <form action={cancelarViaje}>
                       <input type="hidden" name="id" value={viaje.id} />
-                      <button type="submit" disabled={viaje.estado === 'Cancelado'} className="text-[10px] font-black uppercase bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-600 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                      <Button type="submit" variant="red" size="md" disabled={viaje.estado === 'Cancelado'}>
                         Cancelar
-                      </button>
+                      </Button>
                     </form>
                   </td>
                 </tr>

@@ -53,10 +53,10 @@ export default async function VistaPublicaViajes() {
         {userId && (
           <div className="mb-10 flex flex-col md:flex-row gap-4">
             <Link href="/reservar" className="flex-1 block bg-blue-600 text-white text-center py-5 rounded-2xl font-black uppercase tracking-widest shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all hover:-translate-y-1">
-              🎟️ Reservar Asiento
+              Reservar Asiento
             </Link>
             <Link href="/mis-viajes" className="flex-1 block bg-white border border-gray-200 text-black text-center py-5 rounded-2xl font-black uppercase tracking-widest shadow-sm hover:bg-gray-50 hover:shadow-md transition-all hover:-translate-y-1">
-              🎫 Mis Viajes
+              Mis Viajes
             </Link>
           </div>
         )}
@@ -67,7 +67,7 @@ export default async function VistaPublicaViajes() {
           <div className="relative group cursor-help flex items-center">
             <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 text-gray-500 text-[10px] font-bold hover:bg-gray-300 transition-colors">?</span>
             <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 text-white text-xs rounded-xl shadow-lg z-10 leading-relaxed">
-              Este tablero público funciona como el monitor de partidas de un aeropuerto. Permite a los pasajeros identificar rápidamente su vehículo asignado (patente y conductor) y monitorear el estado de la flota en tiempo real sin requerir autenticación.
+              Monitor de partidas para pasajeros. Permite identificar tu vehículo asignado y conocer el estado de la flota en tiempo real.
               <div className="absolute left-1.5 bottom-full border-4 border-transparent border-b-gray-800"></div>
             </div>
           </div>

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
+import { Button } from '@/app/ui/botones/Button'
 
 // --- SERVER ACTIONS --- //
 async function actualizarDestino(formData: FormData) {
@@ -36,7 +37,7 @@ async function actualizarDestino(formData: FormData) {
 export default async function GestionDestinos({
   searchParams,
 }: {
-  searchParams: Promise<{ query?: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const { userId } = await auth()
   const user = await currentUser()
@@ -50,7 +51,7 @@ export default async function GestionDestinos({
 
   // Leemos lo que dice la URL (ej: ?query=facultad)
   const params = await searchParams;
-  const query = params.query || '';
+  const query = typeof params?.query === 'string' ? params.query : '';
 
   // Traemos los destinos reales de Neon
   const destinos = await prisma.destino.findMany({
@@ -81,9 +82,9 @@ export default async function GestionDestinos({
             placeholder="Buscar destino por nombre..." 
             className="flex-1 p-4 rounded-xl border border-gray-200 text-sm font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
           />
-          <button type="submit" className="bg-black text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors shadow-sm">
+          <Button type="submit" variant="primary" size="lg" className="hover:bg-blue-600">
             Buscar
-          </button>
+          </Button>
           {query && (
             <Link href="/destinos" className="bg-red-50 text-red-600 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-colors flex items-center justify-center shadow-sm">
               Limpiar
@@ -113,9 +114,9 @@ export default async function GestionDestinos({
                     <input form={`form-${destino.id}`} name="ubicacion" defaultValue={destino.ubicacion_lat_long} className="w-full p-3 border border-gray-200 rounded-xl text-xs font-mono outline-none focus:border-blue-500" required />
                   </td>
                   <td className="p-4 text-right">
-                    <button form={`form-${destino.id}`} type="submit" className="text-[10px] font-black uppercase bg-blue-50 text-blue-600 px-4 py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all">
+                    <Button form={`form-${destino.id}`} type="submit" variant="blue" size="lg" className="px-4 py-3 hover:bg-blue-600 hover:text-white">
                       Guardar
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
