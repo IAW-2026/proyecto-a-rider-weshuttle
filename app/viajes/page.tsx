@@ -128,8 +128,8 @@ export default async function GestionViajes({
             </p>
           </div>
           <form action={crearViajeAPI}>
-            <Button type="submit" variant="violet" size="lg" className="py-4 w-full sm:w-auto flex items-center gap-2 justify-center">
-              <span className="text-lg">⚡</span> Sincronizar Viaje
+            <Button type="submit" variant="violet" size="lg" className="py-4 w-full sm:w-auto">
+              Sincronizar Viaje
             </Button>
           </form>
         </div>
