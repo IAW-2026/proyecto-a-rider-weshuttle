@@ -24,9 +24,19 @@ export default async function MisViajesPage({
   const currentPage = Number(Array.isArray(pageParam) ? pageParam[0] : pageParam) || 1
   const skip = (currentPage - 1) * ITEMS_PER_PAGE
 
+  // --- NUEVO: Traemos las notificaciones NO leídas de este usuario ---
+  const notificaciones = await prisma.notificacion.findMany({
+    where: { clerk_user_id: userId, read_at: null },
+    orderBy: { id: 'desc' } // Las más nuevas primero
+  })
+
   // 1. VIAJES ACTIVOS (Buscamos directo en la BD solo los futuros y no cancelados)
   const viajesActivos = await prisma.reserva.findMany({
-    where: { clerk_user_id: userId, estado_reserva: { not: 'CANCELED' }, horario: { gte: ahora } },
+    where: { 
+      clerk_user_id: userId, 
+      estado_reserva: { in: ['PENDING_DRIVER', 'CONFIRMED'] }, // Solo los que están esperando
+      horario: { gte: ahora } 
+    },
     include: { destino: true },
     orderBy: { horario: 'asc' }
   })
@@ -38,7 +48,7 @@ export default async function MisViajesPage({
     prisma.reserva.findMany({ 
       where: {
         clerk_user_id: userId,
-        OR: [{ horario: { lt: ahora } }, { estado_reserva: 'CANCELED' }]
+        OR: [{ horario: { lt: ahora } }, { estado_reserva: { in: ['CANCELED', 'PAID', 'DENIED'] } }]
       }, 
       include: { destino: true }, 
       orderBy: { horario: 'desc' }, 
@@ -48,7 +58,7 @@ export default async function MisViajesPage({
     prisma.reserva.count({ 
       where: {
         clerk_user_id: userId,
-        OR: [{ horario: { lt: ahora } }, { estado_reserva: 'CANCELED' }]
+        OR: [{ horario: { lt: ahora } }, { estado_reserva: { in: ['CANCELED', 'PAID', 'DENIED'] } }]
       } 
     })
   ])
@@ -102,15 +112,80 @@ export default async function MisViajesPage({
     revalidatePath('/mis-viajes')
   }
 
+  // --- SERVER ACTION: Simular Feedback ---
+  async function enviarFeedback(formData: FormData) {
+    'use server'
+    try {
+      const id = formData.get('reserva_id') as string
+      const { userId: actionUserId } = await auth()
+      
+      console.log(`[MOCK API] POST /api/feedback -> Calificación enviada para reserva ${id}.`)
+
+      // Si hay internet y todo va bien, guarda la notificación
+      if (actionUserId) {
+        await prisma.notificacion.create({
+          data: { clerk_user_id: actionUserId, tipo: 'REVIEW_SUBMITTED' }
+        })
+      }
+    } catch (error) {
+      console.error("No se pudo guardar la notificación (posible error de conexión a internet):", error)
+    }
+    revalidatePath('/mis-viajes')
+  }
+
+  // --- SERVER ACTION: Marcar notificaciones como leídas ---
+  async function limpiarNotificaciones() {
+    'use server'
+    const { userId: actionUserId } = await auth()
+    if (actionUserId) {
+      await prisma.notificacion.updateMany({
+        where: { clerk_user_id: actionUserId, read_at: null },
+        data: { read_at: new Date() } // Le ponemos fecha de lectura para ocultarlas
+      })
+      revalidatePath('/mis-viajes')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-8 text-black font-sans">
       <div className="max-w-6xl mx-auto">
-        <header className="mb-10">
-          <Link href="/" className="text-[10px] font-bold uppercase text-blue-600 hover:underline">
-            ← Volver al inicio
-          </Link>
-          <h1 className="text-3xl font-black italic mt-2">Mis Viajes</h1>
-          <p className="text-gray-500 text-sm mt-1">Acá podés ver el estado de tus reservas.</p>
+        <header className="mb-10 flex justify-between items-start">
+          <div>
+            <Link href="/" className="text-[10px] font-bold uppercase text-blue-600 hover:underline">
+              ← Volver al inicio
+            </Link>
+            <h1 className="text-3xl font-black italic mt-2">Mis Viajes</h1>
+            <p className="text-gray-500 text-sm mt-1">Acá podés ver el estado de tus reservas.</p>
+          </div>
+
+          {/* CAMPANITA DE NOTIFICACIONES */}
+          <div className="relative group mt-2">
+            <div className="bg-white border border-gray-200 p-3 rounded-full shadow-sm cursor-pointer hover:bg-gray-50 transition-colors">
+              🔔 {notificaciones.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
+            </div>
+            {/* Menú desplegable */}
+            <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 hidden group-hover:block overflow-hidden">
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 className="font-bold text-sm">Notificaciones</h3>
+                {notificaciones.length > 0 && (
+                  <form action={limpiarNotificaciones}>
+                    <button type="submit" className="text-[10px] text-blue-600 font-bold uppercase tracking-widest hover:underline">Marcar leídas</button>
+                  </form>
+                )}
+              </div>
+              <div className="max-h-64 overflow-y-auto p-2">
+                {notificaciones.length === 0 ? (
+                  <p className="p-4 text-center text-xs text-gray-500">No hay avisos nuevos.</p>
+                ) : (
+                  notificaciones.map(notif => (
+                    <div key={notif.id} className="p-3 mb-1 bg-blue-50 text-blue-800 text-xs rounded-xl">
+                      {notif.tipo === 'REVIEW_SUBMITTED' ? '¡Gracias por tu reseña! ⭐ Hemos enviado el feedback al conductor.' : notif.tipo}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
         </header>
 
         <div className="flex flex-col lg:flex-row gap-12 items-start">
@@ -239,9 +314,12 @@ export default async function MisViajesPage({
                     </div>
                     <div className="w-full md:w-auto">
                       {reserva.estado_reserva === 'PAID' ? (
-                        <Button type="button" variant="yellow" size="lg" className="py-3 px-4 w-full md:w-auto whitespace-nowrap" title="Próximamente: Sistema de Reseñas">
-                          ⭐ Calificar Viaje
-                        </Button>
+                        <form action={enviarFeedback}>
+                          <input type="hidden" name="reserva_id" value={reserva.id} />
+                          <Button type="submit" variant="yellow" size="lg" className="py-3 px-4 w-full md:w-auto whitespace-nowrap" title="Enviar reseña simulada">
+                            ⭐ Calificar Viaje
+                          </Button>
+                        </form>
                       ) : (
                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
                           Archivado
