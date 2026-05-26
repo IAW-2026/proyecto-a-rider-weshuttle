@@ -45,3 +45,16 @@ export async function fetchDriverAppMock() {
     }
   };
 }
+
+// --- MOCK: Feedback App ---
+export async function submitFeedbackMock(reserva_id: string, pasajero_id: string) {
+  // Simulamos una demora de red de 500ms
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  
+  console.log(`[MOCK API] POST /api/feedback -> Calificación de 5 estrellas enviada para reserva ${reserva_id} por pasajero ${pasajero_id}.`);
+  
+  return {
+    success: true,
+    message: "Feedback recibido correctamente por la Feedback App."
+  };
+}

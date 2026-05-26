@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { Button } from '@/app/ui/botones/Button'
+import { submitFeedbackMock } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
@@ -119,10 +120,11 @@ export default async function MisViajesPage({
       const id = formData.get('reserva_id') as string
       const { userId: actionUserId } = await auth()
       
-      console.log(`[MOCK API] POST /api/feedback -> Calificación enviada para reserva ${id}.`)
-
       // Si hay internet y todo va bien, guarda la notificación
       if (actionUserId) {
+        // Consumimos el Mock de la API externa centralizado
+        await submitFeedbackMock(id, actionUserId)
+
         await prisma.notificacion.create({
           data: { clerk_user_id: actionUserId, tipo: 'REVIEW_SUBMITTED' }
         })
