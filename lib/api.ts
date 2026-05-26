@@ -46,6 +46,19 @@ export async function fetchDriverAppMock() {
   };
 }
 
+// --- MOCK: Driver App (Cancelación de reserva) ---
+export async function cancelReservationMock(pool_id: string, reservation_id: string) {
+  // Simula la respuesta exacta de: DELETE /api/pools/:pool_id/reservations/:reservation_id
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  console.log(`[MOCK API] DELETE /api/pools/${pool_id}/reservations/${reservation_id} -> Asiento liberado.`);
+  return {
+    "pool_id": pool_id,
+    "reservation_id": reservation_id,
+    "current_passengers": 4, // Simulamos que quedaban 4
+    "pool_status": "AVAILABLE"
+  };
+}
+
 // --- MOCK: Feedback App ---
 export async function submitFeedbackMock(reserva_id: string, pasajero_id: string) {
   // Simulamos una demora de red de 500ms
@@ -58,3 +71,4 @@ export async function submitFeedbackMock(reserva_id: string, pasajero_id: string
     message: "Feedback recibido correctamente por la Feedback App."
   };
 }
+

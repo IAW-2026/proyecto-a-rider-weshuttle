@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { Button } from '@/app/ui/botones/Button'
-import { submitFeedbackMock, fetchDriverAppMock, fetchPaymentsAppMock } from '@/lib/api'
+import { submitFeedbackMock, fetchDriverAppMock, fetchPaymentsAppMock, cancelReservationMock } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,6 +72,15 @@ export default async function MisViajesPage({
     // Buscamos el usuario ADENTRO de la acción para que Next.js no se confunda y explote
     const { userId: actionUserId } = await auth()
     const id = formData.get('reserva_id') as string
+
+    // Si el viaje ya tenía combi (pool_id), cumplimos el contrato avisando a la Driver App
+    const reserva = await prisma.reserva.findFirst({
+      where: { id: id, clerk_user_id: actionUserId || '' }
+    })
+    if (reserva?.pool_id) {
+      await cancelReservationMock(reserva.pool_id, id)
+    }
+
     // SEGURIDAD: Usamos updateMany para exigir que el id de la reserva coincida con tu usuario
     await prisma.reserva.updateMany({
       where: { id: id, clerk_user_id: actionUserId || '' },
