@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { Button } from '@/app/ui/botones/Button'
-import { submitFeedbackMock, fetchDriverAppMock } from '@/lib/api'
+import { submitFeedbackMock, fetchDriverAppMock, fetchPaymentsAppMock } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
@@ -107,10 +107,13 @@ export default async function MisViajesPage({
   async function simularPago(formData: FormData) {
     'use server'
     const id = formData.get('reserva_id') as string
+    
+    // Consumimos el mock de la Payments App para no hardcodear el precio
+    const paymentsData = await fetchPaymentsAppMock()
+
     await prisma.reserva.update({
       where: { id },
-      // Simulamos que la Payments App nos cobró 4200 (el precio estimado)
-      data: { estado_reserva: 'PAID', precio_efectivo: 4200 } 
+      data: { estado_reserva: 'PAID', precio_efectivo: paymentsData.estimated_price } 
     })
     revalidatePath('/mis-viajes')
   }
