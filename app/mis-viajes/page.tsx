@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { Button } from '@/app/ui/botones/Button'
-import { submitFeedbackMock } from '@/lib/api'
+import { submitFeedbackMock, fetchDriverAppMock } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
@@ -85,18 +85,20 @@ export default async function MisViajesPage({
     'use server'
     const id = formData.get('reserva_id') as string
 
-    // Simulamos los datos que nos devolvería la Driver App al asignar una combi
-    const mockDriverSnapshot = {
-      nombre: "Carlos Gómez",
-      patente: "AF 123 CD",
-      vehiculo: "Mercedes Benz Sprinter"
+    // Consumimos el mock de la API de la Driver App en lugar de hardcodearlo
+    const driverData = await fetchDriverAppMock();
+    
+    const driverSnapshot = {
+      nombre: driverData.driver.full_name,
+      patente: driverData.vehicle.license_plate,
+      vehiculo: `${driverData.vehicle.brand} ${driverData.vehicle.model}`
     }
 
     await prisma.reserva.update({
       where: { id },
       data: { 
         estado_reserva: 'CONFIRMED',
-        assigned_driver_snapshot: mockDriverSnapshot
+        assigned_driver_snapshot: driverSnapshot
       }
     })
     revalidatePath('/mis-viajes')
