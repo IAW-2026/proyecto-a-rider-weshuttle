@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { Button } from '@/app/ui/botones/Button'
-import { submitFeedbackMock, getDriverAppAssignedDriverMock, fetchPaymentsAppPricingMock, cancelReservationMock, getFeedbackAppRatingMock } from '@/lib/api'
+import { submitFeedbackMock, getDriverAppAssignedDriverMock, fetchPaymentsAppPricingMock, cancelReservationMock, getFeedbackAppRatingMock, getDriverAppPoolStatusMock } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
@@ -98,15 +98,15 @@ export default async function MisViajesPage({
     const driverData = await getDriverAppAssignedDriverMock("pool_abc123");
     // Consumimos el mock de la Feedback App para saber las estrellas de ESE conductor
     const ratingData = await getFeedbackAppRatingMock(driverData.driver.driver_user_id);
-    // Consumimos Payments App (o Driver App) para saber la capacidad actual
-    const paymentsData = await fetchPaymentsAppPricingMock();
+    // Consumimos Driver App para saber el estado real y oficial de ocupación
+    const poolStatusData = await getDriverAppPoolStatusMock("pool_abc123");
     
     const driverSnapshot = {
       nombre: driverData.driver.full_name,
       patente: driverData.vehicle.license_plate,
       vehiculo: `${driverData.vehicle.brand} ${driverData.vehicle.model}`,
       rating: ratingData.average_rating,
-      ocupacion: `${paymentsData.current_passengers}/15`
+      ocupacion: `${poolStatusData.current_passengers}/${poolStatusData.max_capacity}`
     }
 
     await prisma.reserva.update({
@@ -256,12 +256,12 @@ export default async function MisViajesPage({
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600 font-medium">👤 {(reserva.assigned_driver_snapshot as any).nombre}</span>
-                        <span className="text-yellow-700 font-bold bg-yellow-50 border border-yellow-100 px-2 py-0.5 rounded-md">⭐ {(reserva.assigned_driver_snapshot as any).rating}</span>
+                        <span className="text-yellow-700 font-bold bg-yellow-50 border border-yellow-100 px-2 py-0.5 rounded-md">⭐ {(reserva.assigned_driver_snapshot as any).rating || 'N/A'}</span>
                       </div>
                     </div>
                     <div className="bg-blue-50 border border-blue-100 px-4 py-3 rounded-xl flex items-center justify-between text-xs">
                       <span className="font-black uppercase tracking-widest text-blue-800 text-[9px]">Ocupación de la unidad</span>
-                      <span className="font-black text-blue-600">{(reserva.assigned_driver_snapshot as any).ocupacion}</span>
+                      <span className="font-black text-blue-600">{(reserva.assigned_driver_snapshot as any).ocupacion || 'Calculando...'}</span>
                     </div>
                   </div>
                 )}

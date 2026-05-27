@@ -48,6 +48,21 @@ export async function getDriverAppAssignedDriverMock(pool_id: string) {
   };
 }
 
+// Simula: GET /api/pools/:pool_id/status
+export async function getDriverAppPoolStatusMock(pool_id: string) {
+  return {
+    "pool_id": pool_id,
+    "status": "IN_PROGRESS",
+    "destination_id": "dest_polo_petroquimico",
+    "departure_time": "2026-06-10T08:00:00Z",
+    "current_passengers": 8,
+    "max_capacity": 15,
+    "target_user_id": "user_def456",
+    "hito": "El conductor está en camino a tu ubicación",
+    "updated_at": "2026-06-10T07:15:00Z"
+  }
+}
+
 // Simula: DELETE /api/pools/:pool_id/reservations/:reservation_id
 export async function cancelReservationMock(pool_id: string, reservation_id: string) {
   await new Promise((resolve) => setTimeout(resolve, 300));
