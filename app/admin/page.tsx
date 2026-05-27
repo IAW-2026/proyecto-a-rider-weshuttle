@@ -247,7 +247,19 @@ export default async function GestionViajes({
           <>
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
               <div>
-                <h2 className="text-[32px] font-bold text-[#0A192F] tracking-tight">Monitoreo de Flota</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-[32px] font-bold text-[#0A192F] tracking-tight">Monitoreo de Flota</h2>
+                  <div className="relative group cursor-help flex items-center mt-2">
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#D8DADC] text-[#0A192F] text-[11px] font-bold hover:bg-[#D8DADC]/80 transition-colors">?</span>
+                    <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-72 p-4 bg-[#0A192F] text-[#D8DADC] text-[12px] font-normal rounded-lg shadow-xl z-50 leading-relaxed">
+                      <p className="mb-2"><strong className="text-white tracking-wide">TOTAL:</strong> Suma absoluta de todos los viajes en el sistema.</p>
+                      <p className="mb-2"><strong className="text-white tracking-wide">EN RUTA:</strong> Unidades despachadas ("En camino").</p>
+                      <p className="mb-2"><strong className="text-white tracking-wide">PENDIENTES:</strong> Viajes programados esperando salida.</p>
+                      <p><strong className="text-white tracking-wide">CANCELADOS:</strong> Viajes anulados por el usuario o el sistema.</p>
+                      <div className="absolute left-1.5 bottom-full border-4 border-transparent border-b-[#0A192F]"></div>
+                    </div>
+                  </div>
+                </div>
                 <p className="text-[#475569] text-[16px] mt-1">Gestión operativa y asignación de viajes en tiempo real.</p>
               </div>
             </header>

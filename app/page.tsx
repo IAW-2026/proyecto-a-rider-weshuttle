@@ -41,6 +41,9 @@ export default async function VistaPublicaViajes() {
     where: { clerk_user_id: userId, estado_reserva: 'PAID' }
   }) : 0;
 
+  const emailName = user?.emailAddresses[0]?.emailAddress?.split('@')[0];
+  const displayName = user?.firstName || emailName || 'Pasajero';
+
   // --- SERVER ACTION: Marcar notificaciones como leídas ---
   async function limpiarNotificaciones() {
     'use server'
@@ -134,7 +137,7 @@ export default async function VistaPublicaViajes() {
         
         {/* HEADER WELCOME */}
         <header className="mb-10">
-          <h2 className="text-[32px] font-bold text-[#0A192F] mb-2 tracking-tight">Bienvenido, {user?.firstName || 'Operador'}</h2>
+          <h2 className="text-[32px] font-bold text-[#0A192F] mb-2 tracking-tight">Bienvenido, {displayName}</h2>
           <p className="text-[#475569] text-[16px] max-w-2xl">Gestiona tus traslados corporativos con precisión y facilidad. Visualiza el estado de la flota en tiempo real.</p>
         </header>
 
