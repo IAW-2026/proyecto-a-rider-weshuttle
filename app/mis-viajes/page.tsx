@@ -91,6 +91,12 @@ export default async function MisViajesPage({
     const reserva = await prisma.reserva.findFirst({
       where: { id: id, clerk_user_id: actionUserId || '' }
     })
+
+    if (!reserva) return;
+    if (new Date(reserva.horario) < new Date()) {
+      throw new Error("No se puede cancelar un viaje que ya expiró.");
+    }
+
     if (reserva?.pool_id) {
       await cancelReservationMock(reserva.pool_id, id)
     }
@@ -107,6 +113,11 @@ export default async function MisViajesPage({
   async function simularConfirmacion(formData: FormData) {
     'use server'
     const id = formData.get('reserva_id') as string
+
+    const reservaCheck = await prisma.reserva.findUnique({ where: { id } })
+    if (!reservaCheck || new Date(reservaCheck.horario) < new Date()) {
+      throw new Error("El viaje ya expiró y no puede ser confirmado.");
+    }
 
     // Consumimos el mock de la API de la Driver App en lugar de hardcodearlo
     const driverData = await getDriverAppAssignedDriverMock("pool_abc123");
@@ -137,6 +148,11 @@ export default async function MisViajesPage({
     'use server'
     const id = formData.get('reserva_id') as string
     
+    const reservaCheck = await prisma.reserva.findUnique({ where: { id } })
+    if (!reservaCheck || new Date(reservaCheck.horario) < new Date()) {
+      throw new Error("El viaje ya expiró y no puede ser pagado.");
+    }
+
     // Consumimos el mock de la Payments App para no hardcodear el precio
     const paymentsData = await fetchPaymentsAppPricingMock()
 
@@ -255,7 +271,9 @@ export default async function MisViajesPage({
                 <p className="text-[#475569] text-[16px] mt-1">{viajeIdParam ? 'Información operativa específica de tu viaje.' : 'Gestión y estado en tiempo real de tus trayectos corporativos.'}</p>
             </header>
 
-          {viajesActivos.map((reserva) => (
+          {viajesActivos.map((reserva) => {
+            const isPast = new Date(reserva.horario) < ahora;
+            return (
             <div key={reserva.id} id={`viaje-${reserva.id}`} className="bg-[#FFFFFF] border border-[#D8DADC] rounded-[12px] shadow-sm flex flex-col md:flex-row scroll-mt-24 overflow-hidden">
               
               {/* PARTE IZQUIERDA: TIMELINE Y DETALLES */}
@@ -344,7 +362,7 @@ export default async function MisViajesPage({
                   </div>
 
                   {/* Acciones de Flujo de Negocio */}
-                  {reserva.estado_reserva === 'PENDING_DRIVER' && (
+                  {!isPast && reserva.estado_reserva === 'PENDING_DRIVER' && (
                     <form action={simularConfirmacion}>
                       <input type="hidden" name="reserva_id" value={reserva.id} />
                       <button type="submit" className="w-full py-2.5 rounded-[8px] border-2 border-[#0A192F] text-[#0A192F] text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F] hover:text-white transition-colors">
@@ -353,7 +371,7 @@ export default async function MisViajesPage({
                     </form>
                   )}
                   
-                  {reserva.estado_reserva === 'CONFIRMED' && (
+                  {!isPast && reserva.estado_reserva === 'CONFIRMED' && (
                     <form action={simularPago}>
                       <input type="hidden" name="reserva_id" value={reserva.id} />
                       <button type="submit" className="w-full py-2.5 rounded-[8px] bg-[#0A192F] text-white text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm">
@@ -362,7 +380,7 @@ export default async function MisViajesPage({
                     </form>
                   )}
 
-                  {['PENDING_DRIVER', 'CONFIRMED'].includes(reserva.estado_reserva) && (
+                  {!isPast && ['PENDING_DRIVER', 'CONFIRMED'].includes(reserva.estado_reserva) && (
                     <form action={cancelarReserva}>
                       <input type="hidden" name="reserva_id" value={reserva.id} />
                       <button type="submit" className="w-full py-2.5 rounded-[8px] bg-[#EF4444]/10 text-[#DC2626] border border-[#EF4444]/20 text-[12px] font-bold uppercase tracking-widest hover:bg-[#EF4444]/20 transition-colors">
@@ -370,11 +388,19 @@ export default async function MisViajesPage({
                       </button>
                     </form>
                   )}
+
+                  {isPast && ['PENDING_DRIVER', 'CONFIRMED'].includes(reserva.estado_reserva) && (
+                    <div className="bg-[#F7F9FB] border border-[#D8DADC] rounded-[8px] p-3 text-center shadow-sm">
+                      <span className="text-[11px] font-bold text-[#EF4444] uppercase tracking-widest">Viaje Expirado</span>
+                      <p className="text-[10px] text-[#475569] mt-1 leading-tight">La fecha de partida ya pasó. No se pueden realizar acciones.</p>
+                    </div>
+                  )}
                 </div>
 
               </div>
             </div>
-          ))}
+            )
+          })}
 
           {viajesActivos.length === 0 && (
             <div className="bg-[#FFFFFF] p-12 rounded-[12px] border border-[#D8DADC] border-dashed text-center">
