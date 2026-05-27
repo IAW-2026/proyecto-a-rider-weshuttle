@@ -4,7 +4,7 @@ const { Pool } = require('pg')
 const { PrismaPg } = require('@prisma/adapter-pg')
 
 // Cargar variables de entorno
-config({ path: '.env.local' })
+config() // Ahora lee de tu archivo .env directamente
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 const prismaAdapter = new PrismaPg(pool)
@@ -40,6 +40,16 @@ async function main() {
   destinos.forEach(d => {
     console.log(`  📍 ${d.nombre} (${d.ubicacion_lat_long})`)
   })
+
+  console.log('🚐 Inyectando viajes de prueba (Pools)...')
+  await prisma.pool.createMany({
+    data: [
+      { conductor_nombre: 'Carlos Gómez', vehiculo_patente: 'Toyota - AF 123 CD', estado: 'Programado' },
+      { conductor_nombre: 'Juliana Pagani', vehiculo_patente: 'Sprinter - AF 123 JK', estado: 'En camino' },
+      { conductor_nombre: 'Marcos Silva', vehiculo_patente: 'Transit - AB 456 EF', estado: 'Finalizado' },
+    ]
+  });
+  console.log('✅ ¡Viajes creados exitosamente!')
 }
 
 main()
