@@ -1,10 +1,10 @@
-import { auth } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
-import { Button } from '@/app/ui/botones/Button'
 import { submitFeedbackMock, getDriverAppAssignedDriverMock, fetchPaymentsAppPricingMock, cancelReservationMock, getFeedbackAppRatingMock, getDriverAppPoolStatusMock } from '@/lib/api'
+import { UserButton } from "@clerk/nextjs"
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +14,14 @@ export default async function MisViajesPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const { userId } = await auth()
+  const user = await currentUser()
   if (!userId) redirect('/sign-in')
+  const isAdmin = user?.emailAddresses[0]?.emailAddress === process.env.ADMIN_EMAIL
+
+  const notificaciones = await prisma.notificacion.findMany({
+    where: { clerk_user_id: userId, read_at: null },
+    orderBy: { id: 'desc' }
+  })
 
   const ahora = new Date()
   const ITEMS_PER_PAGE = 5 // Mostramos 5 viajes por página en el historial
@@ -159,176 +166,248 @@ export default async function MisViajesPage({
     revalidatePath('/mis-viajes')
   }
 
+  // --- SERVER ACTION: Marcar notificaciones como leídas ---
+  async function limpiarNotificaciones() {
+    'use server'
+    const { userId: actionUserId } = await auth()
+    if (actionUserId) {
+      await prisma.notificacion.updateMany({
+        where: { clerk_user_id: actionUserId, read_at: null },
+        data: { read_at: new Date() }
+      })
+      revalidatePath('/mis-viajes')
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 p-8 text-black font-sans">
-      <div className="max-w-6xl mx-auto">
-        <header className="mb-10 flex justify-between items-start">
-          <div>
-            <Link href="/" className="text-[10px] font-bold uppercase text-blue-600 hover:underline">
-              ← Volver al inicio
-            </Link>
-            <h1 className="text-3xl font-black italic mt-2">{viajeIdParam ? 'Detalle de Reserva' : 'Mis Viajes'}</h1>
-            <p className="text-gray-500 text-sm mt-1">{viajeIdParam ? 'Información específica de tu viaje.' : 'Acá podés ver el estado de tus reservas.'}</p>
+    <div className="min-h-screen bg-[#F7F9FB] text-[#0A192F]">
+      
+      {/* NAVEGACIÓN SUPERIOR (TopNavBar) */}
+      <nav className="bg-[#FFFFFF] h-20 w-full flex items-center justify-between px-6 sticky top-0 z-50 border-b border-[#D8DADC] shadow-sm">
+        <div className="flex items-center">
+          <Link href="/" className="text-[24px] font-extrabold italic text-[#0A192F] tracking-tight">WeShuttle</Link>
+        </div>
+        <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center h-full gap-8">
+          <Link href="/" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Dashboard</Link>
+          <Link href="/mis-viajes" className="text-[#0A192F] font-bold text-[14px] h-full flex items-center border-b-2 border-[#0A192F]">Mis Viajes</Link>
+          <Link href="/reservar" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Destinos</Link>
+        </div>
+        <div className="flex items-center gap-4 h-full">
+          {/* CAMPANITA DE NOTIFICACIONES */}
+          <div className="relative group flex items-center h-full">
+            <div className="cursor-pointer text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 relative flex items-center justify-center p-2 rounded-full hover:bg-[#F7F9FB]">
+              <span className="material-symbols-outlined text-[24px]">notifications</span>
+              {notificaciones.length > 0 && <span className="absolute top-1 right-1 bg-[#EF4444] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
+            </div>
+            {/* Menú desplegable con puente invisible */}
+            <div className="absolute right-0 top-[100%] pt-1 w-72 z-50 hidden group-hover:block">
+              <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-[#D8DADC] flex justify-between items-center bg-[#F7F9FB]">
+                  <h3 className="text-[16px] font-semibold text-[#0A192F]">Notificaciones</h3>
+                  {notificaciones.length > 0 && (
+                    <form action={limpiarNotificaciones}>
+                      <button type="submit" className="text-[12px] text-[#0A192F] font-bold uppercase tracking-widest hover:underline">Marcar leídas</button>
+                    </form>
+                  )}
+                </div>
+                <div className="max-h-64 overflow-y-auto p-2">
+                  {notificaciones.length === 0 ? (
+                    <p className="p-4 text-center text-[14px] text-[#475569]">No hay avisos nuevos.</p>
+                  ) : (
+                    notificaciones.map(notif => (
+                      <div key={notif.id} className="p-3 mb-1 bg-[#F7F9FB] text-[#0A192F] text-[12px] rounded-lg border border-[#D8DADC]">
+                        {notif.tipo === 'REVIEW_SUBMITTED' ? '¡Gracias por tu reseña! ⭐ Hemos enviado el feedback al conductor.' : notif.tipo}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-        </header>
+          {isAdmin && (
+            <Link href="/admin" className="border border-[#0A192F] text-[#0A192F] px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-[#F7F9FB] transition-colors duration-200">
+              Panel Admin
+            </Link>
+          )}
+          <div className="w-[40px] h-[40px] rounded-full border border-[#D8DADC] flex items-center justify-center overflow-hidden bg-white">
+            <UserButton />
+          </div>
+        </div>
+      </nav>
 
-        <div className="flex flex-col lg:flex-row gap-12 items-start">
+      <main className="py-[32px] px-[24px] md:px-[48px] max-w-7xl mx-auto">
+        
+        {/* LAYOUT: DOS COLUMNAS DESIGUALES */}
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
+          
           {/* --- SECCIÓN 1: VIAJES ACTIVOS --- */}
-          <section className="flex-1 w-full">
-            <h2 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Próximos Viajes
-            </h2>
-            <div className="grid gap-6">
+          <section className="w-full lg:w-2/3 flex flex-col gap-6">
+            
+            {/* ENCABEZADO (Alineado adentro de la columna para subir el historial) */}
+            <header className="mb-2">
+                <Link href="/" className="inline-flex items-center gap-1.5 text-[#475569] hover:text-[#0A192F] text-[12px] font-bold uppercase tracking-widest transition-colors mb-4">
+                  <span className="material-symbols-outlined text-[16px]">arrow_back</span> Volver al inicio
+                </Link>
+                <h1 className="text-[32px] font-bold text-[#0A192F] tracking-tight">{viajeIdParam ? 'Detalle de Reserva' : 'Mis Viajes'}</h1>
+                <p className="text-[#475569] text-[16px] mt-1">{viajeIdParam ? 'Información operativa específica de tu viaje.' : 'Gestión y estado en tiempo real de tus trayectos corporativos.'}</p>
+            </header>
+
           {viajesActivos.map((reserva) => (
-            <div key={reserva.id} id={`viaje-${reserva.id}`} className="bg-white p-6 rounded-[2rem] border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 scroll-mt-24">
-              <div>
-                {reserva.estado_reserva === 'CANCELED' && (
-                  <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 bg-red-50 text-red-600">Cancelado ❌</span>
-                )}
-                {reserva.estado_reserva === 'PENDING_DRIVER' && (
-                  <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 bg-yellow-50 text-yellow-600">Buscando Conductor 🔍</span>
-                )}
-                {reserva.estado_reserva === 'CONFIRMED' && (
-                  <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 bg-green-50 text-green-600">Conductor Asignado 🚐</span>
-                )}
-                {reserva.estado_reserva === 'PAID' && (
-                  <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 bg-blue-50 text-blue-600">Viaje Pagado 💳</span>
-                )}
-                <h3 className="text-lg font-bold">{reserva.destino.nombre}</h3>
-                <p className="text-sm text-gray-500 mt-1">📅 {new Date(reserva.horario).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })} hs</p>
-                <p className="text-xs text-gray-400 mt-1">📍 Salida: {reserva.punto_de_partida}</p>
-                
-                {reserva.precio_maximo && (
-                  <div className="mt-3 flex flex-col items-start gap-1">
-                    <p className="text-sm font-black text-green-600 bg-green-50 px-3 py-1 rounded-lg">
-                      💰 Tope máximo: ${reserva.precio_maximo.toLocaleString('es-AR')}
-                    </p>
-                    <p className="text-[10px] text-gray-500 font-medium px-1">
-                      * El precio final puede ser menor al subir más pasajeros.
-                    </p>
-                  </div>
-                )}
-
-                {reserva.assigned_driver_snapshot && (
-                  <div className="mt-4 flex flex-col gap-2">
-                    <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-xs flex flex-col gap-3">
-                      <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                        <span className="font-bold text-gray-700 flex items-center gap-1">🚐 {(reserva.assigned_driver_snapshot as any).vehiculo}</span>
-                        <span className="font-mono text-[10px] bg-white border border-gray-200 text-gray-500 px-2 py-1 rounded-lg">{(reserva.assigned_driver_snapshot as any).patente}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 font-medium">👤 {(reserva.assigned_driver_snapshot as any).nombre}</span>
-                        <span className="text-yellow-700 font-bold bg-yellow-50 border border-yellow-100 px-2 py-0.5 rounded-md">⭐ {(reserva.assigned_driver_snapshot as any).rating || 'N/A'}</span>
-                      </div>
-                    </div>
-                    <div className="bg-blue-50 border border-blue-100 px-4 py-3 rounded-xl flex items-center justify-between text-xs">
-                      <span className="font-black uppercase tracking-widest text-blue-800 text-[9px]">Ocupación de la unidad</span>
-                      <span className="font-black text-blue-600">{(reserva.assigned_driver_snapshot as any).ocupacion || 'Calculando...'}</span>
-                    </div>
-                  </div>
-                )}
-
-                {reserva.pool_id && (
-                  <p className="text-[10px] text-gray-400 font-mono mt-2 uppercase tracking-widest">
-                    ID Viaje: {reserva.pool_id}
+            <div key={reserva.id} id={`viaje-${reserva.id}`} className="bg-[#FFFFFF] border border-[#D8DADC] rounded-[12px] shadow-sm flex flex-col md:flex-row scroll-mt-24 overflow-hidden">
+              
+              {/* PARTE IZQUIERDA: TIMELINE Y DETALLES */}
+              <div className="flex-1 p-6 md:p-8 flex flex-col">
+                {/* Header de Tarjeta */}
+                <div className="flex justify-between items-center mb-6">
+                  <p className="text-[12px] font-bold uppercase text-[#475569] flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+                    {new Date(reserva.horario).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' })}
                   </p>
+                  <span className={`px-2.5 py-1 rounded-[6px] text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border ${
+                    reserva.estado_reserva === 'PENDING_DRIVER' ? 'bg-[#F59E0B]/10 text-[#D97706] border-[#F59E0B]/20' :
+                    reserva.estado_reserva === 'CONFIRMED' ? 'bg-[#10B981]/10 text-[#059669] border-[#10B981]/20' :
+                    reserva.estado_reserva === 'PAID' ? 'bg-[#3B82F6]/10 text-[#2563EB] border-[#3B82F6]/20' :
+                    'bg-[#EF4444]/10 text-[#DC2626] border-[#EF4444]/20'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${reserva.estado_reserva === 'PENDING_DRIVER' ? 'bg-[#F59E0B] animate-pulse' : reserva.estado_reserva === 'CONFIRMED' ? 'bg-[#10B981]' : 'bg-[#3B82F6]'}`}></span>
+                    {reserva.estado_reserva === 'PENDING_DRIVER' ? 'Buscando Unidad' : reserva.estado_reserva === 'CONFIRMED' ? 'Confirmado' : 'Abonado'}
+                  </span>
+                </div>
+
+                {/* Timeline */}
+                <div className="relative pl-6 border-l-2 border-dashed border-[#D8DADC] ml-2 mb-8 space-y-8 flex-1">
+                  <div className="relative">
+                    <span className="absolute -left-[31px] top-1 w-3 h-3 bg-[#FFFFFF] border-[3px] border-[#0A192F] rounded-full"></span>
+                    <p className="text-[14px] text-[#475569] font-medium leading-none mb-1">{new Date(reserva.horario).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs</p>
+                    <h4 className="text-[18px] font-bold text-[#0A192F] leading-tight">{reserva.punto_de_partida}</h4>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute -left-[31px] top-1 w-3 h-3 bg-[#FFFFFF] border-[3px] border-[#10B981] rounded-full"></span>
+                    <p className="text-[14px] text-[#475569] font-medium leading-none mb-1">Destino Estimado</p>
+                    <h4 className="text-[18px] font-bold text-[#0A192F] leading-tight">{reserva.destino.nombre}</h4>
+                  </div>
+                </div>
+
+                {/* Fila de Detalles Técnicos */}
+                {reserva.assigned_driver_snapshot && (
+                  <div className="flex flex-col sm:flex-row gap-4 p-4 bg-[#F7F9FB] rounded-[8px] border border-[#D8DADC]">
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] mb-1">Vehículo Asignado</p>
+                      <p className="text-[14px] font-semibold text-[#0A192F]">{(reserva.assigned_driver_snapshot as any).vehiculo}</p>
+                      <p className="text-[12px] font-mono text-[#475569] mt-0.5">{(reserva.assigned_driver_snapshot as any).patente}</p>
+                    </div>
+                    <div className="flex-1 sm:border-l border-[#D8DADC] sm:pl-4">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] mb-1">Ocupación</p>
+                      <div className="flex items-center gap-1.5 text-[#0A192F]">
+                        <span className="material-symbols-outlined text-[18px]">group</span>
+                        <span className="text-[14px] font-bold">{(reserva.assigned_driver_snapshot as any).ocupacion || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-              
-              <div className="w-full md:w-auto flex flex-col gap-2">
-                {/* BOTONES DE SIMULACIÓN (Solo para probar el flujo visualmente) */}
-                {reserva.estado_reserva === 'PENDING_DRIVER' && (
-                  <form action={simularConfirmacion}>
-                    <input type="hidden" name="reserva_id" value={reserva.id} />
-                    <Button type="submit" variant="purple" size="md" className="w-full text-[9px]">
-                      🛠️ Simular Asignación
-                    </Button>
-                  </form>
-                )}
-                {reserva.estado_reserva === 'CONFIRMED' && (
-                  <div className="flex flex-col gap-2 w-full">
+
+              {/* PARTE DERECHA: CONDUCTOR Y ACCIONES */}
+              <div className="w-full md:w-72 bg-[#F7F9FB] border-t md:border-t-0 md:border-l border-[#D8DADC] p-6 md:p-8 flex flex-col justify-between shrink-0">
+                
+                <div className="mb-6">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] mb-4">Información Operativa</p>
+                  {reserva.assigned_driver_snapshot ? (
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full border border-[#D8DADC] bg-[#FFFFFF] flex items-center justify-center text-[14px] font-bold text-[#0A192F]">
+                        {(reserva.assigned_driver_snapshot as any).nombre.split(' ').map((n: string) => n[0]).join('').substring(0,2)}
+                      </div>
+                      <div>
+                        <h4 className="text-[14px] font-bold text-[#0A192F]">{(reserva.assigned_driver_snapshot as any).nombre}</h4>
+                        <p className="text-[12px] font-bold text-[#F59E0B] flex items-center gap-0.5 mt-0.5">
+                          <span className="material-symbols-outlined text-[14px] fill-current">star</span> {(reserva.assigned_driver_snapshot as any).rating || '4.0'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-[12px] text-[#475569] italic">Asignación pendiente...</div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-[8px] p-3 text-center mb-2 shadow-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569]">Tarifa Final</p>
+                    <p className="text-[20px] font-bold text-[#0A192F] mt-0.5">${reserva.precio_maximo?.toLocaleString('es-AR') || '0'}</p>
+                  </div>
+
+                  {/* Acciones de Flujo de Negocio */}
+                  {reserva.estado_reserva === 'PENDING_DRIVER' && (
+                    <form action={simularConfirmacion}>
+                      <input type="hidden" name="reserva_id" value={reserva.id} />
+                      <button type="submit" className="w-full py-2.5 rounded-[8px] border-2 border-[#0A192F] text-[#0A192F] text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F] hover:text-white transition-colors">
+                        Simular Asignación
+                      </button>
+                    </form>
+                  )}
+                  
+                  {reserva.estado_reserva === 'CONFIRMED' && (
                     <form action={simularPago}>
                       <input type="hidden" name="reserva_id" value={reserva.id} />
-                      <Button type="submit" variant="blue" size="md" className="w-full text-[9px]">
-                        🛠️ Simular Pago
-                      </Button>
+                      <button type="submit" className="w-full py-2.5 rounded-[8px] bg-[#0A192F] text-white text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm">
+                        Simular Pago
+                      </button>
                     </form>
-                  </div>
-                )}
+                  )}
 
-                {/* Solo permitimos cancelar si el viaje todavía no se pagó */}
-                {['PENDING_DRIVER', 'CONFIRMED'].includes(reserva.estado_reserva) && (
-                  <form action={cancelarReserva}>
-                    <input type="hidden" name="reserva_id" value={reserva.id} />
-                    <Button type="submit" variant="red" size="lg" className="w-full md:w-auto">
-                      Cancelar Viaje
-                    </Button>
-                  </form>
-                )}
+                  {['PENDING_DRIVER', 'CONFIRMED'].includes(reserva.estado_reserva) && (
+                    <form action={cancelarReserva}>
+                      <input type="hidden" name="reserva_id" value={reserva.id} />
+                      <button type="submit" className="w-full py-2.5 rounded-[8px] bg-[#EF4444]/10 text-[#DC2626] border border-[#EF4444]/20 text-[12px] font-bold uppercase tracking-widest hover:bg-[#EF4444]/20 transition-colors">
+                        Cancelar Viaje
+                      </button>
+                    </form>
+                  )}
+                </div>
+
               </div>
             </div>
           ))}
 
           {viajesActivos.length === 0 && (
-            <div className="bg-white p-12 rounded-[3rem] border border-gray-200 text-center">
-              <span className="text-4xl mb-4 block">🎫</span>
-              <h3 className="text-lg font-bold mb-2">No tenés viajes activos</h3>
-              <p className="text-gray-500 text-sm mb-6">Todavía no hiciste ninguna reserva.</p>
-              <Link href="/reservar" className="inline-block bg-black text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 transition-colors">
+            <div className="bg-[#FFFFFF] p-12 rounded-[12px] border border-[#D8DADC] border-dashed text-center">
+              <span className="material-symbols-outlined text-4xl text-[#D8DADC] mb-4 block">directions_bus</span>
+              <h3 className="text-[20px] font-bold text-[#0A192F] mb-2">No tienes viajes activos</h3>
+              <p className="text-[#475569] text-[14px] mb-6">Aún no has agendado ningún traslado corporativo.</p>
+              <Link href="/reservar" className="inline-block bg-[#0A192F] text-white px-6 py-3 rounded-[8px] text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm">
                 Hacer mi primera reserva
               </Link>
             </div>
           )}
-            </div>
           </section>
 
           {/* --- SECCIÓN 2: HISTORIAL --- */}
           {totalHistorial > 0 && (
-            <section className="flex-1 w-full">
-              <h2 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">Historial de Viajes</h2>
-              <div className="grid gap-6 opacity-60 hover:opacity-100 transition-opacity">
+            <aside className="w-full lg:w-1/3 flex flex-col gap-4 lg:mt-[44px]">
+              <h2 className="text-[20px] font-bold text-[#0A192F] mb-2">Historial Reciente</h2>
+              
+              <div className="flex flex-col gap-4">
                 {historial.map((reserva) => (
-                  <div key={reserva.id} className="bg-gray-100 p-6 rounded-[2rem] border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                      {reserva.estado_reserva === 'CANCELED' && (
-                        <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 bg-red-100 text-red-700">Cancelado ❌</span>
-                      )}
-                      {reserva.estado_reserva === 'PAID' && (
-                        <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 bg-blue-100 text-blue-700">Viaje Finalizado ✅</span>
-                      )}
-                      <h3 className="text-lg font-bold text-gray-700">{reserva.destino.nombre}</h3>
-                      <p className="text-sm text-gray-500 mt-1">📅 {new Date(reserva.horario).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })} hs</p>
-                      <p className="text-xs text-gray-400 mt-1">📍 Salida: {reserva.punto_de_partida}</p>
-                      
-                      {reserva.precio_maximo && (
-                        <p className="text-sm font-black text-gray-600 mt-3 bg-white inline-block px-3 py-1 rounded-lg border border-gray-200">
-                          💰 Total: ${reserva.precio_maximo.toLocaleString('es-AR')}
-                        </p>
-                      )}
-
-                      {reserva.assigned_driver_snapshot && (
-                        <div className="mt-3 bg-white/50 border border-gray-200 p-3 rounded-xl text-xs flex flex-col gap-1">
-                          <p className="font-bold text-gray-700 flex items-center justify-between">
-                            <span>🚐 {(reserva.assigned_driver_snapshot as any).vehiculo}</span>
-                            <span className="font-mono text-[9px] bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded text-gray-500">{(reserva.assigned_driver_snapshot as any).patente}</span>
-                          </p>
-                          <p className="text-gray-600">👤 {(reserva.assigned_driver_snapshot as any).nombre}</p>
-                        </div>
-                      )}
+                  <div key={reserva.id} className="bg-[#FFFFFF] border border-[#D8DADC] rounded-[12px] p-5 shadow-sm hover:border-[#0A192F]/30 transition-colors">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-[12px] font-bold text-[#475569]">{new Date(reserva.horario).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}</span>
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${reserva.estado_reserva === 'PAID' ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+                        {reserva.estado_reserva === 'PAID' ? 'Completado' : 'Cancelado'}
+                      </span>
                     </div>
-                    <div className="w-full md:w-auto">
+                    <h4 className="text-[16px] font-bold text-[#0A192F] mb-4 truncate">{reserva.destino.nombre}</h4>
+                    
+                    <div className="flex justify-between items-center pt-4 border-t border-[#D8DADC]">
                       {reserva.estado_reserva === 'PAID' ? (
                         <form action={enviarFeedback}>
                           <input type="hidden" name="reserva_id" value={reserva.id} />
-                          <Button type="submit" variant="yellow" size="lg" className="py-3 px-4 w-full md:w-auto whitespace-nowrap" title="Enviar reseña simulada">
-                            ⭐ Calificar Viaje
-                          </Button>
+                          <button type="submit" className="text-[12px] font-bold text-[#F59E0B] hover:underline flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[16px] fill-current">star</span> Calificar
+                          </button>
                         </form>
                       ) : (
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                          Archivado
-                        </span>
+                        <span className="text-[12px] text-[#475569]">Sin acciones</span>
                       )}
+                      <Link href={`/mis-viajes?viaje_id=${reserva.id}`} className="text-[12px] font-bold text-[#0A192F] hover:underline">Detalles &gt;</Link>
                     </div>
                   </div>
                 ))}
@@ -336,36 +415,27 @@ export default async function MisViajesPage({
 
               {/* CONTROLES DE PAGINACIÓN */}
               {totalPages > 1 && (
-                <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
-                  <span className="text-xs text-gray-500 font-bold">
-                    Página {currentPage} de {totalPages}
-                  </span>
+                <div className="flex justify-between items-center mt-2 pt-4 border-t border-[#D8DADC]">
+                  <span className="text-[12px] text-[#475569] font-medium">Página {currentPage} de {totalPages}</span>
                   <div className="flex gap-2">
                     {currentPage > 1 ? (
-                      <Link href={`/mis-viajes?page=${currentPage - 1}`} className="bg-white border border-gray-200 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-colors shadow-sm">
-                        ⬅️ Anterior
-                      </Link>
+                      <Link href={`/mis-viajes?page=${currentPage - 1}`} className="px-3 py-1.5 bg-[#FFFFFF] border border-[#D8DADC] text-[#0A192F] rounded hover:bg-[#F7F9FB] text-[12px] font-bold transition-colors">Anterior</Link>
                     ) : (
-                      <Button variant="disabled" size="md" disabled>
-                        ⬅️ Anterior
-                      </Button>
+                      <span className="px-3 py-1.5 bg-[#F7F9FB] border border-[#D8DADC] text-[#475569] rounded text-[12px] font-bold opacity-50 cursor-not-allowed">Anterior</span>
                     )}
                     {currentPage < totalPages ? (
-                      <Link href={`/mis-viajes?page=${currentPage + 1}`} className="bg-white border border-gray-200 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-colors shadow-sm">
-                        Siguiente ➡️
-                      </Link>
+                      <Link href={`/mis-viajes?page=${currentPage + 1}`} className="px-3 py-1.5 bg-[#FFFFFF] border border-[#D8DADC] text-[#0A192F] rounded hover:bg-[#F7F9FB] text-[12px] font-bold transition-colors">Siguiente</Link>
                     ) : (
-                      <Button variant="disabled" size="md" disabled>
-                        Siguiente ➡️
-                      </Button>
+                      <span className="px-3 py-1.5 bg-[#F7F9FB] border border-[#D8DADC] text-[#475569] rounded text-[12px] font-bold opacity-50 cursor-not-allowed">Siguiente</span>
                     )}
                   </div>
                 </div>
               )}
-            </section>
+            </aside>
           )}
         </div>
-      </div>
+
+      </main>
     </div>
   )
 }
