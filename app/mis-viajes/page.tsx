@@ -24,11 +24,15 @@ export default async function MisViajesPage({
   const pageParam = params?.page;
   const currentPage = Number(Array.isArray(pageParam) ? pageParam[0] : pageParam) || 1
   const skip = (currentPage - 1) * ITEMS_PER_PAGE
+  
+  // Vemos si en la URL nos pasaron un viaje específico (Modo Detalle)
+  const viajeIdParam = typeof params?.viaje_id === 'string' ? params.viaje_id : undefined;
 
   // 1. VIAJES ACTIVOS (Buscamos directo en la BD solo los futuros y no cancelados)
   const viajesActivos = await prisma.reserva.findMany({
     where: { 
       clerk_user_id: userId, 
+      id: viajeIdParam, // Si viajeIdParam existe, filtra solo ese. Si no, trae todos.
       estado_reserva: { in: ['PENDING_DRIVER', 'CONFIRMED'] }, // Solo los que están esperando
       horario: { gte: ahora } 
     },
@@ -37,26 +41,32 @@ export default async function MisViajesPage({
   })
   
   // 2. HISTORIAL PAGINADO (Buscamos directo en la BD los pasados o cancelados)
+  let historial: any[] = [];
+  let totalHistorial = 0;
 
-  // Ejecutamos la búsqueda y el conteo total al mismo tiempo para que sea más rápido
-  const [historial, totalHistorial] = await Promise.all([
-    prisma.reserva.findMany({ 
-      where: {
-        clerk_user_id: userId,
-        OR: [{ horario: { lt: ahora } }, { estado_reserva: { in: ['CANCELED', 'PAID', 'DENIED'] } }]
-      }, 
-      include: { destino: true }, 
-      orderBy: { horario: 'desc' }, 
-      take: ITEMS_PER_PAGE, 
-      skip: skip 
-    }),
-    prisma.reserva.count({ 
-      where: {
-        clerk_user_id: userId,
-        OR: [{ horario: { lt: ahora } }, { estado_reserva: { in: ['CANCELED', 'PAID', 'DENIED'] } }]
-      } 
-    })
-  ])
+  // Solo cargamos el historial si NO estamos en la "Vista de Detalle"
+  if (!viajeIdParam) {
+    const [h, t] = await Promise.all([
+      prisma.reserva.findMany({ 
+        where: {
+          clerk_user_id: userId,
+          OR: [{ horario: { lt: ahora } }, { estado_reserva: { in: ['CANCELED', 'PAID', 'DENIED'] } }]
+        }, 
+        include: { destino: true }, 
+        orderBy: { horario: 'desc' }, 
+        take: ITEMS_PER_PAGE, 
+        skip: skip 
+      }),
+      prisma.reserva.count({ 
+        where: {
+          clerk_user_id: userId,
+          OR: [{ horario: { lt: ahora } }, { estado_reserva: { in: ['CANCELED', 'PAID', 'DENIED'] } }]
+        } 
+      })
+    ])
+    historial = h;
+    totalHistorial = t;
+  }
 
   const totalPages = Math.ceil(totalHistorial / ITEMS_PER_PAGE)
 
@@ -157,8 +167,8 @@ export default async function MisViajesPage({
             <Link href="/" className="text-[10px] font-bold uppercase text-blue-600 hover:underline">
               ← Volver al inicio
             </Link>
-            <h1 className="text-3xl font-black italic mt-2">Mis Viajes</h1>
-            <p className="text-gray-500 text-sm mt-1">Acá podés ver el estado de tus reservas.</p>
+            <h1 className="text-3xl font-black italic mt-2">{viajeIdParam ? 'Detalle de Reserva' : 'Mis Viajes'}</h1>
+            <p className="text-gray-500 text-sm mt-1">{viajeIdParam ? 'Información específica de tu viaje.' : 'Acá podés ver el estado de tus reservas.'}</p>
           </div>
         </header>
 
@@ -170,7 +180,7 @@ export default async function MisViajesPage({
             </h2>
             <div className="grid gap-6">
           {viajesActivos.map((reserva) => (
-            <div key={reserva.id} className="bg-white p-6 rounded-[2rem] border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div key={reserva.id} id={`viaje-${reserva.id}`} className="bg-white p-6 rounded-[2rem] border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 scroll-mt-24">
               <div>
                 {reserva.estado_reserva === 'CANCELED' && (
                   <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-3 bg-red-50 text-red-600">Cancelado ❌</span>
