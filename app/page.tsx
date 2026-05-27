@@ -192,7 +192,16 @@ export default async function VistaPublicaViajes() {
         {/* SECCIÓN: COMBIS EN REAL-TIME */}
         <div className="mb-6 flex justify-between items-end">
           <div>
-            <h2 className="text-[20px] font-bold text-[#0A192F]">Combis en Real-Time</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-[20px] font-bold text-[#0A192F]">Combis en Real-Time</h2>
+              <div className="relative group cursor-help flex items-center">
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#D8DADC] text-[#0A192F] text-[10px] font-bold hover:bg-[#D8DADC]/80 transition-colors">?</span>
+                <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-[#0A192F] text-[#F7F9FB] text-[12px] font-normal rounded-lg shadow-sm z-10 leading-relaxed">
+                  Monitor de partidas para pasajeros. Permite identificar tu vehículo asignado y conocer el estado de la flota en tiempo real.
+                  <div className="absolute left-1.5 bottom-full border-4 border-transparent border-b-[#0A192F]"></div>
+                </div>
+              </div>
+            </div>
             <p className="text-[14px] text-[#475569] mt-1">Monitor de flota activa</p>
           </div>
           <div className="flex items-center gap-2 bg-[#FFFFFF] border border-[#D8DADC] px-3 py-1.5 rounded-lg shadow-sm">
