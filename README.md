@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🛸 WeShuttle - Rider App
 
-## Getting Started
+Plataforma de reservas y logística para pasajeros. Esta aplicación forma parte del ecosistema distribuido WeShuttle, permitiendo a los usuarios finales reservar asientos en combis, gestionar su historial de viajes y simular la interacción con el resto de los microservicios.
 
-First, run the development server:
+## 🚀 Enlace de Producción (Deploy)
+**🔗 https://proyecto-a-rider-weshuttle.vercel.app**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🔑 Credenciales de Acceso
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Para evaluar la aplicación con los datos pre-cargados (reservas creadas, canceladas, completadas), por favor utilizar las siguientes credenciales:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**1. Usuario Administrador (Acceso al Panel Logístico y Vista Pública):**
+* **Email:** [TU_EMAIL_ADMINISTRADOR_AQUI@gmail.com]
+* **Contraseña:** [TU_CONTRASEÑA_AQUI]
+*(O ingresar directamente mediante el botón de OAuth de Google si corresponde a esta cuenta).*
 
-## Learn More
+**2. Usuario Pasajero (Solo Vista Pública y Mis Viajes):**
+* **Email:** [OTRO_EMAIL_PASAJERO_AQUI@gmail.com]
+* **Contraseña:** [TU_CONTRASEÑA_AQUI]
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🛠️ Tecnologías Utilizadas
+* **Framework:** Next.js 14 (App Router)
+* **Base de Datos:** PostgreSQL (Neon DB) + Prisma ORM
+* **Autenticación:** Clerk Auth
+* **Estilos:** Tailwind CSS
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## ✨ Requisitos Cumplidos (Checklist)
+- [x] **Páginas Next.js:** UI responsiva y componentes reutilizables.
+- [x] **API Propia REST:** Endpoints expuestos (`/passengers`, `/cancellations`, `/feedback`, etc.).
+- [x] **PostgreSQL propia:** Esquema independiente con Prisma.
+- [x] **Autenticación:** Login/Logout obligatorio mediante Clerk.
+- [x] **Panel de Administración:** Gestión CRUD de viajes y combis.
+- [x] **Búsqueda y Paginación:** Filtrado por estado de viaje en URL (`?query=`).
+- [x] **Manejo de Errores:** Archivos `error.tsx` implementados.
+- [x] **API Externa:** Consumo de mocks simulando la Driver App, Payments App y Feedback App.
+- [x] **Datos Cargados:** Base de datos productiva sembrada (Seed) y con historial de uso real.
