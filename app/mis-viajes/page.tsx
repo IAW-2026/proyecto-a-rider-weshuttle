@@ -35,14 +35,16 @@ export default async function MisViajesPage({
   // Vemos si en la URL nos pasaron un viaje específico (Modo Detalle)
   const viajeIdParam = typeof params?.viaje_id === 'string' ? params.viaje_id : undefined;
 
-  // 1. VIAJES ACTIVOS (Buscamos directo en la BD solo los futuros y no cancelados)
+  // 1. VIAJES ACTIVOS O MODO DETALLE
+  // Si nos pasan un ID por URL, traemos ese viaje sin importar su estado o fecha.
   const viajesActivos = await prisma.reserva.findMany({
-    where: { 
-      clerk_user_id: userId, 
-      id: viajeIdParam, // Si viajeIdParam existe, filtra solo ese. Si no, trae todos.
-      estado_reserva: { in: ['PENDING_DRIVER', 'CONFIRMED'] }, // Solo los que están esperando
-      horario: { gte: ahora } 
-    },
+    where: viajeIdParam 
+      ? { clerk_user_id: userId, id: viajeIdParam } 
+      : { 
+          clerk_user_id: userId, 
+          estado_reserva: { in: ['PENDING_DRIVER', 'CONFIRMED'] },
+          horario: { gte: ahora } 
+        },
     include: { destino: true },
     orderBy: { horario: 'asc' }
   })
@@ -245,8 +247,8 @@ export default async function MisViajesPage({
             
             {/* ENCABEZADO (Alineado adentro de la columna para subir el historial) */}
             <header className="mb-2">
-                <Link href="/" className="inline-flex items-center gap-1.5 text-[#475569] hover:text-[#0A192F] text-[12px] font-bold uppercase tracking-widest transition-colors mb-4">
-                  <span className="material-symbols-outlined text-[16px]">arrow_back</span> Volver al inicio
+                <Link href={viajeIdParam ? "/mis-viajes" : "/"} className="inline-flex items-center gap-1.5 text-[#475569] hover:text-[#0A192F] text-[12px] font-bold uppercase tracking-widest transition-colors mb-4">
+                  <span className="material-symbols-outlined text-[16px]">arrow_back</span> {viajeIdParam ? 'Volver a Mis Viajes' : 'Volver al Inicio'}
                 </Link>
                 <h1 className="text-[32px] font-bold text-[#0A192F] tracking-tight">{viajeIdParam ? 'Detalle de Reserva' : 'Mis Viajes'}</h1>
                 <p className="text-[#475569] text-[16px] mt-1">{viajeIdParam ? 'Información operativa específica de tu viaje.' : 'Gestión y estado en tiempo real de tus trayectos corporativos.'}</p>
@@ -269,8 +271,13 @@ export default async function MisViajesPage({
                     reserva.estado_reserva === 'PAID' ? 'bg-[#3B82F6]/10 text-[#2563EB] border-[#3B82F6]/20' :
                     'bg-[#EF4444]/10 text-[#DC2626] border-[#EF4444]/20'
                   }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${reserva.estado_reserva === 'PENDING_DRIVER' ? 'bg-[#F59E0B] animate-pulse' : reserva.estado_reserva === 'CONFIRMED' ? 'bg-[#10B981]' : 'bg-[#3B82F6]'}`}></span>
-                    {reserva.estado_reserva === 'PENDING_DRIVER' ? 'Buscando Unidad' : reserva.estado_reserva === 'CONFIRMED' ? 'Confirmado' : 'Abonado'}
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      reserva.estado_reserva === 'PENDING_DRIVER' ? 'bg-[#F59E0B] animate-pulse' : 
+                      reserva.estado_reserva === 'CONFIRMED' ? 'bg-[#10B981]' : 
+                      reserva.estado_reserva === 'PAID' ? 'bg-[#3B82F6]' : 
+                      'bg-[#EF4444]'
+                    }`}></span>
+                    {reserva.estado_reserva === 'PENDING_DRIVER' ? 'Buscando Unidad' : reserva.estado_reserva === 'CONFIRMED' ? 'Confirmado' : reserva.estado_reserva === 'PAID' ? 'Abonado' : 'Cancelado'}
                   </span>
                 </div>
 
@@ -331,8 +338,8 @@ export default async function MisViajesPage({
 
                 <div className="flex flex-col gap-3">
                   <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-[8px] p-3 text-center mb-2 shadow-sm">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569]">Tarifa Final</p>
-                    <p className="text-[20px] font-bold text-[#0A192F] mt-0.5">${reserva.precio_maximo?.toLocaleString('es-AR') || '0'}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569]">{reserva.estado_reserva === 'CANCELED' ? 'Tarifa Anulada' : 'Tarifa Estimada'}</p>
+                    <p className={`text-[20px] font-bold mt-0.5 ${reserva.estado_reserva === 'CANCELED' ? 'text-[#475569] line-through decoration-[#EF4444] opacity-70' : 'text-[#0A192F]'}`}>${reserva.precio_maximo?.toLocaleString('es-AR') || '0'}</p>
                   </div>
 
                   {/* Acciones de Flujo de Negocio */}
@@ -371,10 +378,10 @@ export default async function MisViajesPage({
           {viajesActivos.length === 0 && (
             <div className="bg-[#FFFFFF] p-12 rounded-[12px] border border-[#D8DADC] border-dashed text-center">
               <span className="material-symbols-outlined text-4xl text-[#D8DADC] mb-4 block">directions_bus</span>
-              <h3 className="text-[20px] font-bold text-[#0A192F] mb-2">No tienes viajes activos</h3>
-              <p className="text-[#475569] text-[14px] mb-6">Aún no has agendado ningún traslado corporativo.</p>
-              <Link href="/reservar" className="inline-block bg-[#0A192F] text-white px-6 py-3 rounded-[8px] text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm">
-                Hacer mi primera reserva
+              <h3 className="text-[20px] font-bold text-[#0A192F] mb-2">{viajeIdParam ? 'Viaje no encontrado' : 'No tienes viajes activos'}</h3>
+              <p className="text-[#475569] text-[14px] mb-6">{viajeIdParam ? 'El detalle de esta reserva no se encuentra disponible.' : 'Aún no has agendado ningún traslado corporativo.'}</p>
+              <Link href={viajeIdParam ? "/mis-viajes" : "/reservar"} className="inline-block bg-[#0A192F] text-white px-6 py-3 rounded-[8px] text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm">
+                {viajeIdParam ? 'Volver a Mis Viajes' : 'Hacer mi primera reserva'}
               </Link>
             </div>
           )}
