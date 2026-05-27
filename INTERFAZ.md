@@ -1,64 +1,66 @@
-web application/stitch/projects/18305270878125694891/screens/b084b13d1fcc47068b0c6771e615ec5a
-# Especificaciones Técnicas: Pantalla Reservar Asiento - WeShuttle
+web application/stitch/projects/18305270878125694891/screens/13c3fbbbcff64f01ac1032d2b4f63a9d
+# Especificaciones Técnicas: Gestión de Logística (Admin) - WeShuttle
 
-Este documento detalla la estructura, campos y lógica visual del flujo de reserva de WeShuttle, basado en el sistema **Professional Corporate Identity**.
-
----
-
-## 1. Estructura de la Página
-La pantalla está diseñada como un formulario enfocado, centrado en el viewport para eliminar distracciones y maximizar la tasa de conversión.
-
-- **Contenedor Externo:** Fondo `Surface (#F7F9FB)`.
-- **Card del Formulario:** 
-  - Ancho máximo: `800px`.
-  - Margen: Auto-centrado.
-  - Padding interno: `40px` (Superior/Inferior) y `48px` (Lateral).
-  - Estilo: Fondo blanco, borde `1px` en `Outline (#D8DADC)` y radio de `12px`.
+Este documento detalla la estructura, componentes y lógica visual del panel administrativo de WeShuttle, basado en el sistema **Professional Corporate Identity**.
 
 ---
 
-## 2. Encabezado de Acción
-- **Enlace de Retorno:** "VOLVER AL DASHBOARD" con icono de flecha hacia la izquierda.
-  - Estilo: `Label Small`, Peso Bold, Color `Slate Gray (#4B5563)`.
-- **Título:** "Reservar Asiento" (`Display Large`, 32px, Bold).
-- **Subtítulo:** "Complete los detalles para asegurar su lugar en el próximo servicio de WeShuttle." (`Body Medium`, Slate Gray).
+## 1. Arquitectura de la Página
+La pantalla de administración utiliza un layout de escritorio con navegación lateral persistente y un área de contenido principal organizada en una cuadrícula de dashboard.
+
+- **Fondo de Pantalla:** `Surface (#F7F9FB)`.
+- **Navegación Lateral (SideBar):** Ancho fijo de `260px`, fondo blanco con borde derecho `1px solid #D8DADC`.
 
 ---
 
-## 3. Campos del Formulario (Input Fields)
-Cada campo sigue una estructura de etiqueta superior (`Label Small`, Bold) y contenedor de entrada con altura de `56px`.
-
-### A. Destino Final
-- **Selector:** Menú desplegable con icono de mapa (`map`).
-- **Placeholder:** "Seleccione su destino".
-- **Estilo:** Borde `1px` sólido, radio `8px`, icono de flecha hacia abajo.
-
-### B. Grid de Tiempo (Fecha y Horario)
-Distribuido en dos columnas de igual ancho (`flex-1`).
-- **Fecha:** Selector con icono de calendario. Valor por defecto: Fecha actual.
-- **Horario:** Selector con icono de reloj. Intervalos sugeridos cada 30 min.
-
-### C. Punto de Recogida
-- **Input de Texto:** Campo amplio para direcciones manuales con icono de ubicación (`location_on`).
-- **Ayuda Visual:** Texto de apoyo inferior ("Ej: Entrada principal Edificio Titanium") en gris tenue.
+## 2. Indicadores Clave de Desempeño (KPI Cards)
+Ubicados en la parte superior para una lectura rápida del estado operativo.
+- **Estructura:** Fila de 4 tarjetas iguales.
+- **Elementos por Tarjeta:**
+  - **Título:** `Label Small`, Bold, Slate Gray.
+  - **Valor Numérico:** `Display Large` (e.g., 24, 08), Midnight Blue.
+  - **Icono:** Iconos lineales (`local_shipping`, `analytics`, etc.) en el extremo superior derecho.
+  - **Metadato/Tendencia:** Texto pequeño inferior (e.g., "+12% vs ayer" en verde o "Capacidad al 82%").
 
 ---
 
-## 4. Bloque de Información y Garantía
-- **Banner de Info:** Contenedor azul muy suave (`bg-blue-50`) con borde sutil.
-  - **Contenido:** Icono de información y texto detallando el tiempo estimado de viaje (45 mins) y la confirmación del conductor (30 mins antes).
-- **Garantía:** Texto centrado debajo del botón principal: "GARANTÍA DE PUNTUALIDAD WESHUTTLE" en `Label Small`, espaciado (`tracking-widest`).
+## 3. Tabla de Viajes en Tiempo Real (Main View)
+El componente central para el monitoreo de la flota.
+- **Contenedor:** Card blanca con radio de `12px` y sombra suave.
+- **Header de Tabla:** Filtros rápidos ("Todos", "En ruta", "Pendientes") con estilo de botones segmentados.
+- **Columnas:**
+  - **Viaje / Ruta:** ID del viaje (`#WS-8902`) en bold y descripción de ruta (Origen → Destino).
+  - **Conductor / Placa:** Avatar circular, nombre del conductor y patente del vehículo.
+  - **Estado:** Badges con colores semánticos:
+    - `EN RUTA`: Fondo verde suave, texto verde fuerte, punto indicador.
+    - `RETRASADO`: Fondo ámbar suave, texto ámbar fuerte.
+    - `PENDIENTE`: Fondo gris/azul suave.
+  - **Acciones:** Botón "Actualizar" (Outlined) y botón circular de cancelación (Icono X en rojo).
 
 ---
 
-## 5. Acción Principal (CTA)
-- **Botón "Confirmar Reserva":**
-  - Estilo: Relleno total (Solid), Color `Midnight Blue (#0A192F)`.
-  - Icono: Checkmark al final del texto.
-  - Comportamiento: Ancho completo (`w-full`), altura `56px`, tipografía Bold.
+## 4. Panel de Asignación de Viajes (Sidebar Derecha)
+Formulario lateral para la creación rápida de nuevos trayectos.
+- **Título:** "Asignar Nuevo Viaje" con icono de portapapeles.
+- **Campos del Formulario:**
+  - **Ruta de Destino:** Input con icono de ubicación.
+  - **Selector de Conductor:** Menú desplegable con búsqueda integrada.
+  - **Grid de Tiempo:** Selectores de Fecha y Hora en una sola fila.
+- **Resumen de Carga:** Bloque informativo azul tenue que detalla el peso estimado y tipo de carga.
+- **CTA Principal:** Botón "Confirmar y Notificar" en `Midnight Blue (#0A192F)` con icono de cohete/envío.
 
 ---
 
-## 6. Footer Informativo
-- **Soporte:** Enlace centrado "¿Necesita asistencia especial? Contacte a Logística".
-- **Legales:** Barra inferior con copyright y enlaces a Términos, Privacidad y Ayuda en gris claro.
+## 5. Navegación Lateral (SideNavBar)
+- **Marca:** "WeShuttle Admin" en Itálica Extra-Bold.
+- **Items de Menú:** "Logística", "Conductores", "Destinos", "Reportes", "Ajustes".
+- **Estado Activo:** Fondo negro/azul oscuro con texto blanco para el item seleccionado.
+- **Footer:** Botón de "Cerrar Sesión" con icono de salida en la parte inferior.
+
+---
+
+## 6. Estilos y Tokens
+- **Primario:** Midnight Blue (`#0A192F`).
+- **Bordes:** Outline (`#D8DADC`).
+- **Radio de Borde:** `12px` para tarjetas grandes, `8px` para inputs y botones.
+- **Tipografía:** `Inter` en toda la interfaz.
