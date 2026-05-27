@@ -20,9 +20,10 @@ export default async function NuevaReservaPage() {
     const horario = formData.get('horario') as string
     const punto_partida = formData.get('punto_partida') as string
 
-    // SEGURIDAD (Backend): Validamos que los datos no estén vacíos ni sean puros espacios
-    if (!destino_id || !horario || !punto_partida || punto_partida.trim().length < 5) {
-      throw new Error("Datos inválidos. Por favor completá todos los campos correctamente.")
+    // SEGURIDAD (Backend): Validamos que los datos no estén vacíos, puros espacios, y que sea una dirección real (tenga letras)
+    const tieneLetras = /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(punto_partida || '');
+    if (!destino_id || !horario || !punto_partida || punto_partida.trim().length < 5 || !tieneLetras) {
+      throw new Error("Datos inválidos. El punto de recogida debe ser una dirección real (ej: Calle 123).")
     }
 
     // Buscamos al usuario de Clerk RECIÉN cuando se ejecuta la acción
@@ -111,7 +112,7 @@ export default async function NuevaReservaPage() {
           </div>
           <div>
             <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">¿Por dónde te buscamos?</label>
-            <input type="text" name="punto_partida" placeholder="Ej: Sarmiento 850, Bahía Blanca" required minLength={5} maxLength={100} className="w-full p-4 rounded-xl border border-gray-200 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+            <input type="text" name="punto_partida" placeholder="Ej: Sarmiento 850, Bahía Blanca" required minLength={5} maxLength={100} pattern=".*[a-zA-ZáéíóúÁÉÍÓÚñÑ].*" title="Debe incluir al menos una letra (Ej: Calle 123)" className="w-full p-4 rounded-xl border border-gray-200 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
           </div>
           <Button type="submit" variant="primary" size="xl" className="w-full mt-4 hover:bg-blue-600 shadow-md">
             Confirmar Reserva
