@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/app/ui/botones/Button'
-import { fetchPaymentsAppMock, fetchDriverAppPoolMock } from '@/lib/api'
+import { fetchPaymentsAppPricingMock, createDriverAppPoolMock } from '@/lib/api'
 
 export default async function NuevaReservaPage() {
   // Protegemos la página al entrar
@@ -41,8 +41,13 @@ export default async function NuevaReservaPage() {
     }
 
     // 1. Consultamos a las APIs amigas (Mocks por ahora)
-    const paymentsData = await fetchPaymentsAppMock()
-    const driverData = await fetchDriverAppPoolMock()
+    const paymentsData = await fetchPaymentsAppPricingMock()
+    const driverData = await createDriverAppPoolMock()
+
+    // NUEVO: Validación de lógica de negocio (Disponibilidad)
+    if (driverData.current_passengers >= driverData.max_capacity) {
+      throw new Error("Error de negocio: No hay asientos disponibles en la unidad para este horario y destino.")
+    }
 
     // 2. Asegurarnos de que el Pasajero exista en nuestra base de datos
     await prisma.pasajero.upsert({

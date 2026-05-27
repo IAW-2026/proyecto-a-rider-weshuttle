@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { Button } from '@/app/ui/botones/Button'
-import { fetchDriverAppMock } from '@/lib/api'
+import { getDriverAppAssignedDriverMock } from '@/lib/api'
 
   // --- SERVER ACTIONS PARA EL CRUD --- //
 
@@ -21,7 +21,7 @@ import { fetchDriverAppMock } from '@/lib/api'
       throw new Error("Acceso denegado. Solo administradores.")
     }
 
-    const data = await fetchDriverAppMock();
+    const data = await getDriverAppAssignedDriverMock("pool_mock_123");
 
     await prisma.pool.create({
       data: {

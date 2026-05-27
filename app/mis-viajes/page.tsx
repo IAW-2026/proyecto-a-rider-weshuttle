@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { Button } from '@/app/ui/botones/Button'
-import { submitFeedbackMock, fetchDriverAppMock, fetchPaymentsAppMock, cancelReservationMock } from '@/lib/api'
+import { submitFeedbackMock, getDriverAppAssignedDriverMock, fetchPaymentsAppPricingMock, cancelReservationMock, getFeedbackAppRatingMock } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
@@ -95,12 +95,18 @@ export default async function MisViajesPage({
     const id = formData.get('reserva_id') as string
 
     // Consumimos el mock de la API de la Driver App en lugar de hardcodearlo
-    const driverData = await fetchDriverAppMock();
+    const driverData = await getDriverAppAssignedDriverMock("pool_abc123");
+    // Consumimos el mock de la Feedback App para saber las estrellas de ESE conductor
+    const ratingData = await getFeedbackAppRatingMock(driverData.driver.driver_user_id);
+    // Consumimos Payments App (o Driver App) para saber la capacidad actual
+    const paymentsData = await fetchPaymentsAppPricingMock();
     
     const driverSnapshot = {
       nombre: driverData.driver.full_name,
       patente: driverData.vehicle.license_plate,
-      vehiculo: `${driverData.vehicle.brand} ${driverData.vehicle.model}`
+      vehiculo: `${driverData.vehicle.brand} ${driverData.vehicle.model}`,
+      rating: ratingData.average_rating,
+      ocupacion: `${paymentsData.current_passengers}/15`
     }
 
     await prisma.reserva.update({
@@ -118,7 +124,7 @@ export default async function MisViajesPage({
     const id = formData.get('reserva_id') as string
     
     // Consumimos el mock de la Payments App para no hardcodear el precio
-    const paymentsData = await fetchPaymentsAppMock()
+    const paymentsData = await fetchPaymentsAppPricingMock()
 
     await prisma.reserva.update({
       where: { id },
@@ -231,15 +237,32 @@ export default async function MisViajesPage({
                 <p className="text-xs text-gray-400 mt-1">📍 Salida: {reserva.punto_de_partida}</p>
                 
                 {reserva.precio_maximo && (
-                  <p className="text-sm font-black text-green-600 mt-3 bg-green-50 inline-block px-3 py-1 rounded-lg">
-                    💰 Total estimado: ${reserva.precio_maximo.toLocaleString('es-AR')}
-                  </p>
+                  <div className="mt-3 flex flex-col items-start gap-1">
+                    <p className="text-sm font-black text-green-600 bg-green-50 px-3 py-1 rounded-lg">
+                      💰 Tope máximo: ${reserva.precio_maximo.toLocaleString('es-AR')}
+                    </p>
+                    <p className="text-[10px] text-gray-500 font-medium px-1">
+                      * El precio final puede ser menor al subir más pasajeros.
+                    </p>
+                  </div>
                 )}
 
                 {reserva.assigned_driver_snapshot && (
-                  <div className="mt-3 bg-gray-50 border border-gray-200 p-3 rounded-xl text-xs">
-                    <p className="font-bold text-gray-700">🚐 Conductor Asignado:</p>
-                    <p className="text-gray-600">{(reserva.assigned_driver_snapshot as any).nombre} - {(reserva.assigned_driver_snapshot as any).vehiculo} ({(reserva.assigned_driver_snapshot as any).patente})</p>
+                  <div className="mt-4 flex flex-col gap-2">
+                    <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-xs flex flex-col gap-3">
+                      <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                        <span className="font-bold text-gray-700 flex items-center gap-1">🚐 {(reserva.assigned_driver_snapshot as any).vehiculo}</span>
+                        <span className="font-mono text-[10px] bg-white border border-gray-200 text-gray-500 px-2 py-1 rounded-lg">{(reserva.assigned_driver_snapshot as any).patente}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 font-medium">👤 {(reserva.assigned_driver_snapshot as any).nombre}</span>
+                        <span className="text-yellow-700 font-bold bg-yellow-50 border border-yellow-100 px-2 py-0.5 rounded-md">⭐ {(reserva.assigned_driver_snapshot as any).rating}</span>
+                      </div>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-100 px-4 py-3 rounded-xl flex items-center justify-between text-xs">
+                      <span className="font-black uppercase tracking-widest text-blue-800 text-[9px]">Ocupación de la unidad</span>
+                      <span className="font-black text-blue-600">{(reserva.assigned_driver_snapshot as any).ocupacion}</span>
+                    </div>
                   </div>
                 )}
 
@@ -322,9 +345,12 @@ export default async function MisViajesPage({
                       )}
 
                       {reserva.assigned_driver_snapshot && (
-                        <div className="mt-3 bg-white/50 border border-gray-200 p-3 rounded-xl text-xs">
-                          <p className="font-bold text-gray-700">🚐 Viajaste con:</p>
-                          <p className="text-gray-600">{(reserva.assigned_driver_snapshot as any).nombre} - {(reserva.assigned_driver_snapshot as any).vehiculo} ({(reserva.assigned_driver_snapshot as any).patente})</p>
+                        <div className="mt-3 bg-white/50 border border-gray-200 p-3 rounded-xl text-xs flex flex-col gap-1">
+                          <p className="font-bold text-gray-700 flex items-center justify-between">
+                            <span>🚐 {(reserva.assigned_driver_snapshot as any).vehiculo}</span>
+                            <span className="font-mono text-[9px] bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded text-gray-500">{(reserva.assigned_driver_snapshot as any).patente}</span>
+                          </p>
+                          <p className="text-gray-600">👤 {(reserva.assigned_driver_snapshot as any).nombre}</p>
                         </div>
                       )}
                     </div>
