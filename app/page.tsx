@@ -165,7 +165,7 @@ export default async function VistaPublicaViajes() {
                         <span className="material-symbols-outlined text-[16px]">schedule</span> {new Date(proximoViaje.horario).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} hs
                       </p>
                     </div>
-                  <Link href={`/mis-viajes?viaje_id=${proximoViaje.id}`} className="mt-1 inline-flex items-center justify-center gap-1 text-[#0A192F] text-[12px] font-bold uppercase hover:bg-[#e2e8f0] bg-[#F7F9FB] border border-[#D8DADC] px-4 py-2.5 rounded-lg transition-colors w-full">
+                  <Link href={`/mis-viajes?viaje_id=${proximoViaje.id}&from=home`} className="mt-1 inline-flex items-center justify-center gap-1 text-[#0A192F] text-[12px] font-bold uppercase hover:bg-[#e2e8f0] bg-[#F7F9FB] border border-[#D8DADC] px-4 py-2.5 rounded-lg transition-colors w-full">
                       Ver detalles <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
                     </Link>
                   </div>

@@ -36,7 +36,8 @@ export default async function NuevaReservaPage() {
 
     // Buscamos al usuario de Clerk RECIÉN cuando se ejecuta la acción
     const { userId: actionUserId } = await auth()
-    if (!actionUserId || !user) return
+    const actionUser = await currentUser()
+    if (!actionUserId || !actionUser) return
 
     // El string de horario viene sin zona horaria. Le avisamos a Node que es hora de Argentina (-03:00)
     // para que lo valide y lo guarde correctamente en la base de datos.
@@ -63,8 +64,8 @@ export default async function NuevaReservaPage() {
       update: {},
       create: {
         clerk_user_id: actionUserId,
-        nombre: user?.firstName || 'Pasajero',
-        email: user?.emailAddresses[0]?.emailAddress,
+        nombre: actionUser?.firstName || 'Pasajero',
+        email: actionUser?.emailAddresses[0]?.emailAddress,
         rol: 'RIDER'
       }
     })

@@ -34,6 +34,7 @@ export default async function MisViajesPage({
   
   // Vemos si en la URL nos pasaron un viaje específico (Modo Detalle)
   const viajeIdParam = typeof params?.viaje_id === 'string' ? params.viaje_id : undefined;
+  const fromParam = typeof params?.from === 'string' ? params.from : undefined;
 
   // 1. VIAJES ACTIVOS O MODO DETALLE
   // Si nos pasan un ID por URL, traemos ese viaje sin importar su estado o fecha.
@@ -247,8 +248,8 @@ export default async function MisViajesPage({
             
             {/* ENCABEZADO (Alineado adentro de la columna para subir el historial) */}
             <header className="mb-2">
-                <Link href={viajeIdParam ? "/mis-viajes" : "/"} className="inline-flex items-center gap-1.5 text-[#475569] hover:text-[#0A192F] text-[12px] font-bold uppercase tracking-widest transition-colors mb-4">
-                  <span className="material-symbols-outlined text-[16px]">arrow_back</span> {viajeIdParam ? 'Volver a Mis Viajes' : 'Volver al Inicio'}
+                <Link href={viajeIdParam ? (fromParam === 'home' ? '/' : '/mis-viajes') : "/"} className="inline-flex items-center gap-1.5 text-[#475569] hover:text-[#0A192F] text-[12px] font-bold uppercase tracking-widest transition-colors mb-4">
+                  <span className="material-symbols-outlined text-[16px]">arrow_back</span> {viajeIdParam ? (fromParam === 'home' ? 'Volver al Dashboard' : 'Volver a Mis Viajes') : 'Volver al Dashboard'}
                 </Link>
                 <h1 className="text-[32px] font-bold text-[#0A192F] tracking-tight">{viajeIdParam ? 'Detalle de Reserva' : 'Mis Viajes'}</h1>
                 <p className="text-[#475569] text-[16px] mt-1">{viajeIdParam ? 'Información operativa específica de tu viaje.' : 'Gestión y estado en tiempo real de tus trayectos corporativos.'}</p>
@@ -380,8 +381,8 @@ export default async function MisViajesPage({
               <span className="material-symbols-outlined text-4xl text-[#D8DADC] mb-4 block">directions_bus</span>
               <h3 className="text-[20px] font-bold text-[#0A192F] mb-2">{viajeIdParam ? 'Viaje no encontrado' : 'No tienes viajes activos'}</h3>
               <p className="text-[#475569] text-[14px] mb-6">{viajeIdParam ? 'El detalle de esta reserva no se encuentra disponible.' : 'Aún no has agendado ningún traslado corporativo.'}</p>
-              <Link href={viajeIdParam ? "/mis-viajes" : "/reservar"} className="inline-block bg-[#0A192F] text-white px-6 py-3 rounded-[8px] text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm">
-                {viajeIdParam ? 'Volver a Mis Viajes' : 'Hacer mi primera reserva'}
+              <Link href={viajeIdParam ? (fromParam === 'home' ? '/' : '/mis-viajes') : "/reservar"} className="inline-block bg-[#0A192F] text-white px-6 py-3 rounded-[8px] text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm">
+                {viajeIdParam ? (fromParam === 'home' ? 'Volver al Dashboard' : 'Volver a Mis Viajes') : 'Hacer mi primera reserva'}
               </Link>
             </div>
           )}
