@@ -137,7 +137,7 @@ export default async function VistaPublicaViajes() {
                 <tr key={viaje.id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
                   <td className="p-6 font-bold text-sm">{viaje.conductor_nombre}</td>
                   <td className="p-6 text-xs text-gray-500 font-mono">{viaje.vehiculo_patente}</td>
-                  <td className="p-6 text-sm font-medium">{viaje.fecha_viaje ? new Date(viaje.fecha_viaje).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) + 'hs' : 'Pronto'}</td>
+                  <td className="p-6 text-sm font-medium">{viaje.fecha_viaje ? new Date(viaje.fecha_viaje).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) + ' hs' : 'Pronto'}</td>
                   <td className="p-6 text-right">
                     <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider ${viaje.estado === 'Programado' ? 'bg-blue-50 text-blue-600' : viaje.estado === 'En camino' ? 'bg-yellow-50 text-yellow-600' : 'bg-gray-100 text-gray-500'}`}>
                       {viaje.estado}
