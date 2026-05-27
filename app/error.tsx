@@ -17,23 +17,23 @@ export default function Error({
   }, [error])
  
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8 text-black font-sans">
-      <div className="bg-white p-12 rounded-[3rem] border border-gray-200 shadow-sm text-center max-w-md w-full">
-        <div className="text-6xl mb-6">🚨</div>
-        <h1 className="text-2xl font-black italic mb-2">¡Ups! Algo salió mal</h1>
-        <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-          {error.message || "Tuvimos un problema procesando tu solicitud. Por favor, intentá de nuevo."}
+    <div className="min-h-screen bg-[#F7F9FB] flex flex-col items-center justify-center p-8 text-[#0A192F]">
+      <div className="bg-[#FFFFFF] p-10 md:p-12 rounded-[12px] border border-[#D8DADC] shadow-sm text-center max-w-md w-full">
+        <span className="material-symbols-outlined text-[64px] text-[#EF4444] mb-6 block">warning</span>
+        <h1 className="text-[24px] font-bold tracking-tight mb-2">¡Ups! Algo salió mal</h1>
+        <p className="text-[#475569] text-[14px] mb-8 leading-relaxed">
+          {error.message || "Tuvimos un problema procesando tu solicitud en WeShuttle. Por favor, intentá de nuevo."}
         </p>
         
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           <button
             onClick={() => reset()}
-            className="w-full bg-blue-600 text-white text-xs font-black uppercase tracking-widest py-4 rounded-2xl hover:bg-blue-700 transition-colors shadow-md"
+            className="flex items-center justify-center gap-2 w-full bg-[#0A192F] text-white text-[12px] font-bold uppercase tracking-widest py-3.5 rounded-[8px] hover:bg-[#0A192F]/90 transition-all shadow-sm"
           >
-            Intentar de nuevo
+            <span className="material-symbols-outlined text-[18px]">refresh</span> Intentar de nuevo
           </button>
-          <Link href="/" className="w-full bg-gray-100 text-gray-600 text-xs font-black uppercase tracking-widest py-4 rounded-2xl hover:bg-gray-200 transition-colors">
-            Volver al inicio
+          <Link href="/" className="flex items-center justify-center gap-2 w-full bg-[#F7F9FB] border border-[#D8DADC] text-[#475569] text-[12px] font-bold uppercase tracking-widest py-3.5 rounded-[8px] hover:bg-[#E2E8F0] hover:text-[#0A192F] transition-all">
+            <span className="material-symbols-outlined text-[18px]">home</span> Volver al inicio
           </Link>
         </div>
       </div>
