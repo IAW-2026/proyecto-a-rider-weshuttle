@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { UserButton } from "@clerk/nextjs"
+import { revalidatePath } from 'next/cache'
 
 // Esta página NO es estática, se recarga con la base de datos
 export const dynamic = 'force-dynamic'
@@ -19,6 +20,25 @@ export default async function VistaPublicaViajes() {
   
   const isAdmin = user?.emailAddresses[0]?.emailAddress === process.env.ADMIN_EMAIL
 
+  // --- NUEVO: Traemos las notificaciones ---
+  const notificaciones = userId ? await prisma.notificacion.findMany({
+    where: { clerk_user_id: userId, read_at: null },
+    orderBy: { id: 'desc' }
+  }) : []
+
+  // --- SERVER ACTION: Marcar notificaciones como leídas ---
+  async function limpiarNotificaciones() {
+    'use server'
+    const { userId: actionUserId } = await auth()
+    if (actionUserId) {
+      await prisma.notificacion.updateMany({
+        where: { clerk_user_id: actionUserId, read_at: null },
+        data: { read_at: new Date() }
+      })
+      revalidatePath('/')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-8 text-black font-sans">
       <div className="max-w-4xl mx-auto">
@@ -33,6 +53,37 @@ export default async function VistaPublicaViajes() {
             {/* Si está logueado mostramos el botón de admin, sino el de ingresar */}
             {userId ? (
               <>
+                {/* CAMPANITA DE NOTIFICACIONES */}
+                <div className="relative group">
+                  <div className="bg-white border border-gray-200 p-2.5 rounded-full shadow-sm cursor-pointer hover:bg-gray-50 transition-colors">
+                    🔔 {notificaciones.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
+                  </div>
+                  {/* Menú desplegable con puente invisible (pt-2) para arreglar el hover */}
+                  <div className="absolute right-0 top-full pt-2 w-72 z-50 hidden group-hover:block">
+                    <div className="bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
+                      <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                        <h3 className="font-bold text-sm">Notificaciones</h3>
+                        {notificaciones.length > 0 && (
+                          <form action={limpiarNotificaciones}>
+                            <button type="submit" className="text-[10px] text-blue-600 font-bold uppercase tracking-widest hover:underline">Marcar leídas</button>
+                          </form>
+                        )}
+                      </div>
+                      <div className="max-h-64 overflow-y-auto p-2">
+                        {notificaciones.length === 0 ? (
+                          <p className="p-4 text-center text-xs text-gray-500">No hay avisos nuevos.</p>
+                        ) : (
+                          notificaciones.map(notif => (
+                            <div key={notif.id} className="p-3 mb-1 bg-blue-50 text-blue-800 text-xs rounded-xl">
+                              {notif.tipo === 'REVIEW_SUBMITTED' ? '¡Gracias por tu reseña! ⭐ Hemos enviado el feedback al conductor.' : notif.tipo}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {isAdmin && (
                   <Link href="/admin" className="text-[10px] font-bold uppercase text-blue-600 hover:underline">
                     Panel Admin
