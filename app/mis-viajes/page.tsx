@@ -207,19 +207,19 @@ export default async function MisViajesPage({
           <Link href="/" className="text-[24px] font-extrabold italic text-[#0A192F] tracking-tight">WeShuttle</Link>
         </div>
         <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center h-full gap-8">
-          <Link href="/" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Dashboard</Link>
+          <Link href="/" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Inicio</Link>
           <Link href="/mis-viajes" className="text-[#0A192F] font-bold text-[14px] h-full flex items-center border-b-2 border-[#0A192F]">Mis Viajes</Link>
-          <Link href="/reservar" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Destinos</Link>
+          <Link href="/reservar" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Reservar</Link>
         </div>
         <div className="flex items-center gap-4 h-full">
           {/* CAMPANITA DE NOTIFICACIONES */}
-          <div className="relative group flex items-center h-full">
+          <div className="relative group flex items-center h-full" tabIndex={0}>
             <div className="cursor-pointer text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 relative flex items-center justify-center p-2 rounded-full hover:bg-[#F7F9FB]">
               <span className="material-symbols-outlined text-[24px]">notifications</span>
               {notificaciones.length > 0 && <span className="absolute top-1 right-1 bg-[#EF4444] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
             </div>
             {/* Menú desplegable con puente invisible */}
-            <div className="absolute right-0 top-[100%] pt-1 w-72 z-50 hidden group-hover:block">
+            <div className="absolute right-0 top-[100%] pt-1 w-72 z-50 hidden group-hover:block group-focus-within:block">
               <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-[#D8DADC] flex justify-between items-center bg-[#F7F9FB]">
                   <h3 className="text-[16px] font-semibold text-[#0A192F]">Notificaciones</h3>
@@ -265,7 +265,7 @@ export default async function MisViajesPage({
             {/* ENCABEZADO (Alineado adentro de la columna para subir el historial) */}
             <header className="mb-2">
                 <Link href={viajeIdParam ? (fromParam === 'home' ? '/' : '/mis-viajes') : "/"} className="inline-flex items-center gap-1.5 text-[#475569] hover:text-[#0A192F] text-[12px] font-bold uppercase tracking-widest transition-colors mb-4">
-                  <span className="material-symbols-outlined text-[16px]">arrow_back</span> {viajeIdParam ? (fromParam === 'home' ? 'Volver al Dashboard' : 'Volver a Mis Viajes') : 'Volver al Dashboard'}
+                  <span className="material-symbols-outlined text-[16px]">arrow_back</span> {viajeIdParam ? (fromParam === 'home' ? 'Volver al Inicio' : 'Volver a Mis Viajes') : 'Volver al Inicio'}
                 </Link>
                 <h1 className="text-[32px] font-bold text-[#0A192F] tracking-tight">{viajeIdParam ? 'Detalle de Reserva' : 'Mis Viajes'}</h1>
                 <p className="text-[#475569] text-[16px] mt-1">{viajeIdParam ? 'Información operativa específica de tu viaje.' : 'Gestión y estado en tiempo real de tus trayectos corporativos.'}</p>
@@ -408,7 +408,7 @@ export default async function MisViajesPage({
               <h3 className="text-[20px] font-bold text-[#0A192F] mb-2">{viajeIdParam ? 'Viaje no encontrado' : 'No tienes viajes activos'}</h3>
               <p className="text-[#475569] text-[14px] mb-6">{viajeIdParam ? 'El detalle de esta reserva no se encuentra disponible.' : 'Aún no has agendado ningún traslado corporativo.'}</p>
               <Link href={viajeIdParam ? (fromParam === 'home' ? '/' : '/mis-viajes') : "/reservar"} className="inline-block bg-[#0A192F] text-white px-6 py-3 rounded-[8px] text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm">
-                {viajeIdParam ? (fromParam === 'home' ? 'Volver al Dashboard' : 'Volver a Mis Viajes') : 'Hacer mi primera reserva'}
+                {viajeIdParam ? (fromParam === 'home' ? 'Volver al Inicio' : 'Volver a Mis Viajes') : 'Hacer mi primera reserva'}
               </Link>
             </div>
           )}
@@ -479,7 +479,7 @@ export default async function MisViajesPage({
         </Link>
         <Link href="/mis-viajes" className="flex flex-col items-center justify-center w-full h-full text-[#0A192F] bg-[#F7F9FB]">
           <span className="material-symbols-outlined text-[24px] font-bold">directions_bus</span>
-          <span className="text-[10px] font-bold mt-0.5">Viajes</span>
+          <span className="text-[10px] font-bold mt-0.5">Mis Viajes</span>
         </Link>
         <Link href="/reservar" className="flex flex-col items-center justify-center w-full h-full text-[#475569] hover:text-[#0A192F] active:bg-[#F7F9FB]">
           <span className="material-symbols-outlined text-[24px]">add_circle</span>

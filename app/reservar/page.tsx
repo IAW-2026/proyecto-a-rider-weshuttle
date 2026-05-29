@@ -115,17 +115,17 @@ export default async function NuevaReservaPage() {
           <Link href="/" className="text-[24px] font-extrabold italic text-[#0A192F] tracking-tight">WeShuttle</Link>
         </div>
         <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center h-full gap-8">
-          <Link href="/" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Dashboard</Link>
+          <Link href="/" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Inicio</Link>
           <Link href="/mis-viajes" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Mis Viajes</Link>
-          <Link href="/reservar" className="text-[#0A192F] font-bold text-[14px] h-full flex items-center border-b-2 border-[#0A192F]">Destinos</Link>
+          <Link href="/reservar" className="text-[#0A192F] font-bold text-[14px] h-full flex items-center border-b-2 border-[#0A192F]">Reservar</Link>
         </div>
         <div className="flex items-center gap-4 h-full">
-          <div className="relative group flex items-center h-full">
+          <div className="relative group flex items-center h-full" tabIndex={0}>
             <div className="cursor-pointer text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 relative flex items-center justify-center p-2 rounded-full hover:bg-[#F7F9FB]">
               <span className="material-symbols-outlined text-[24px]">notifications</span>
               {notificaciones.length > 0 && <span className="absolute top-1 right-1 bg-[#EF4444] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
             </div>
-            <div className="absolute right-0 top-[100%] pt-1 w-72 z-50 hidden group-hover:block">
+            <div className="absolute right-0 top-[100%] pt-1 w-72 z-50 hidden group-hover:block group-focus-within:block">
               <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-[#D8DADC] flex justify-between items-center bg-[#F7F9FB]">
                   <h3 className="text-[16px] font-semibold text-[#0A192F]">Notificaciones</h3>
@@ -165,7 +165,7 @@ export default async function NuevaReservaPage() {
         <div className="w-full bg-[#FFFFFF] p-[40px] md:p-[48px] rounded-[12px] border border-[#D8DADC] shadow-sm">
           <header className="mb-8">
             <Link href="/" className="inline-flex items-center gap-1.5 text-[#475569] hover:text-[#0A192F] text-[12px] font-bold uppercase tracking-widest transition-colors mb-4">
-              <span className="material-symbols-outlined text-[16px]">arrow_back</span> Volver al Dashboard
+              <span className="material-symbols-outlined text-[16px]">arrow_back</span> Volver al Inicio
             </Link>
             <h1 className="text-[32px] font-bold text-[#0A192F] tracking-tight">Reservar Asiento</h1>
             <p className="text-[#475569] text-[16px] mt-1">Complete los detalles para asegurar su lugar en el próximo servicio de WeShuttle.</p>
@@ -188,11 +188,11 @@ export default async function NuevaReservaPage() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 w-full overflow-hidden">
                 <label className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Fecha y Horario de Partida</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">calendar_clock</span>
-                  <input type="datetime-local" name="horario" min={minDateTime} defaultValue={minDateTime} required className="w-full min-w-0 max-w-full h-[56px] pl-10 pr-2 md:pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
+                  <input type="datetime-local" name="horario" min={minDateTime} defaultValue={minDateTime} required className="w-full appearance-none min-w-0 max-w-full h-[56px] pl-10 pr-2 md:pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
                 </div>
               </div>
             </div>
@@ -232,7 +232,7 @@ export default async function NuevaReservaPage() {
         </Link>
         <Link href="/mis-viajes" className="flex flex-col items-center justify-center w-full h-full text-[#475569] hover:text-[#0A192F] active:bg-[#F7F9FB]">
           <span className="material-symbols-outlined text-[24px]">directions_bus</span>
-          <span className="text-[10px] font-bold mt-0.5">Viajes</span>
+          <span className="text-[10px] font-bold mt-0.5">Mis Viajes</span>
         </Link>
         <Link href="/reservar" className="flex flex-col items-center justify-center w-full h-full text-[#0A192F] bg-[#F7F9FB]">
           <span className="material-symbols-outlined text-[24px] font-bold">add_circle</span>
