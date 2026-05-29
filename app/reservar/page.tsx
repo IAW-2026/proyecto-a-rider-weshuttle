@@ -2,8 +2,9 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { Button } from '@/app/ui/botones/Button'
-import { fetchPaymentsAppMock, fetchDriverAppPoolMock } from '@/lib/api'
+import { fetchPaymentsAppPricingMock, createDriverAppPoolMock } from '@/lib/api'
+import { UserButton } from "@clerk/nextjs"
+import { revalidatePath } from 'next/cache'
 
 export default async function NuevaReservaPage() {
   // Protegemos la página al entrar
@@ -12,6 +13,13 @@ export default async function NuevaReservaPage() {
 
   // Traemos los destinos reales de la base de datos
   const destinos = await prisma.destino.findMany()
+  const user = await currentUser()
+  const isAdmin = user?.emailAddresses[0]?.emailAddress === process.env.ADMIN_EMAIL
+
+  const notificaciones = userId ? await prisma.notificacion.findMany({
+    where: { clerk_user_id: userId, read_at: null },
+    orderBy: { id: 'desc' }
+  }) : []
 
   // --- SERVER ACTION: Lo que pasa al tocar "Confirmar" ---
   async function confirmarReserva(formData: FormData) {
@@ -20,15 +28,16 @@ export default async function NuevaReservaPage() {
     const horario = formData.get('horario') as string
     const punto_partida = formData.get('punto_partida') as string
 
-    // SEGURIDAD (Backend): Validamos que los datos no estén vacíos ni sean puros espacios
-    if (!destino_id || !horario || !punto_partida || punto_partida.trim().length < 5) {
-      throw new Error("Datos inválidos. Por favor completá todos los campos correctamente.")
+    // SEGURIDAD (Backend): Validamos que los datos no estén vacíos, puros espacios, y que sea una dirección real (tenga letras)
+    const tieneLetras = /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(punto_partida || '');
+    if (!destino_id || !horario || !punto_partida || punto_partida.trim().length < 5 || !tieneLetras) {
+      throw new Error("Datos inválidos. El punto de recogida debe ser una dirección real (ej: Calle 123).")
     }
 
     // Buscamos al usuario de Clerk RECIÉN cuando se ejecuta la acción
     const { userId: actionUserId } = await auth()
-    const user = await currentUser()
-    if (!actionUserId || !user) return
+    const actionUser = await currentUser()
+    if (!actionUserId || !actionUser) return
 
     // El string de horario viene sin zona horaria. Le avisamos a Node que es hora de Argentina (-03:00)
     // para que lo valide y lo guarde correctamente en la base de datos.
@@ -41,8 +50,13 @@ export default async function NuevaReservaPage() {
     }
 
     // 1. Consultamos a las APIs amigas (Mocks por ahora)
-    const paymentsData = await fetchPaymentsAppMock()
-    const driverData = await fetchDriverAppPoolMock()
+    const paymentsData = await fetchPaymentsAppPricingMock()
+    const driverData = await createDriverAppPoolMock()
+
+    // NUEVO: Validación de lógica de negocio (Disponibilidad)
+    if (driverData.current_passengers >= driverData.max_capacity) {
+      throw new Error("Error de negocio: No hay asientos disponibles en la unidad para este horario y destino.")
+    }
 
     // 2. Asegurarnos de que el Pasajero exista en nuestra base de datos
     await prisma.pasajero.upsert({
@@ -50,8 +64,8 @@ export default async function NuevaReservaPage() {
       update: {},
       create: {
         clerk_user_id: actionUserId,
-        nombre: user?.firstName || 'Pasajero',
-        email: user?.emailAddresses[0]?.emailAddress,
+        nombre: actionUser?.firstName || 'Pasajero',
+        email: actionUser?.emailAddresses[0]?.emailAddress,
         rol: 'RIDER'
       }
     })
@@ -79,40 +93,136 @@ export default async function NuevaReservaPage() {
   const minArgConMargen = new Date(ahoraUtc.getTime() - 3 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000) 
   const minDateTime = minArgConMargen.toISOString().slice(0, 16)
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-8 text-black font-sans flex flex-col items-center justify-center">
-      <div className="w-full max-w-md bg-white p-8 rounded-[2rem] border border-gray-200 shadow-sm">
-        <header className="mb-8">
-          <Link href="/" className="text-[10px] font-bold uppercase text-blue-600 hover:underline">
-            ← Volver al inicio
-          </Link>
-          <h1 className="text-3xl font-black italic mt-2">Reservar Asiento</h1>
-          <p className="text-gray-500 text-sm mt-1">Elegí a dónde y cuándo querés viajar.</p>
-        </header>
+  // --- SERVER ACTION: Marcar notificaciones como leídas ---
+  async function limpiarNotificaciones() {
+    'use server'
+    const { userId: actionUserId } = await auth()
+    if (actionUserId) {
+      await prisma.notificacion.updateMany({
+        where: { clerk_user_id: actionUserId, read_at: null },
+        data: { read_at: new Date() }
+      })
+      revalidatePath('/reservar')
+    }
+  }
 
-        <form action={confirmarReserva} className="flex flex-col gap-6">
-          <div>
-            <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">¿A dónde vamos?</label>
-            <select name="destino_id" required className="w-full p-4 rounded-xl border border-gray-200 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all">
-              <option value="">Seleccioná un destino...</option>
-              {destinos.map(d => (
-                <option key={d.id} value={d.id}>{d.nombre}</option>
-              ))}
-            </select>
+  return (
+    <div className="min-h-screen bg-[#F7F9FB] text-[#0A192F]">
+      
+      {/* NAVEGACIÓN SUPERIOR (TopNavBar) */}
+      <nav className="bg-[#FFFFFF] h-20 w-full flex items-center justify-between px-6 sticky top-0 z-50 border-b border-[#D8DADC] shadow-sm">
+        <div className="flex items-center">
+          <Link href="/" className="text-[24px] font-extrabold italic text-[#0A192F] tracking-tight">WeShuttle</Link>
+        </div>
+        <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center h-full gap-8">
+          <Link href="/" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Dashboard</Link>
+          <Link href="/mis-viajes" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Mis Viajes</Link>
+          <Link href="/reservar" className="text-[#0A192F] font-bold text-[14px] h-full flex items-center border-b-2 border-[#0A192F]">Destinos</Link>
+        </div>
+        <div className="flex items-center gap-4 h-full">
+          <div className="relative group flex items-center h-full">
+            <div className="cursor-pointer text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 relative flex items-center justify-center p-2 rounded-full hover:bg-[#F7F9FB]">
+              <span className="material-symbols-outlined text-[24px]">notifications</span>
+              {notificaciones.length > 0 && <span className="absolute top-1 right-1 bg-[#EF4444] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
+            </div>
+            <div className="absolute right-0 top-[100%] pt-1 w-72 z-50 hidden group-hover:block">
+              <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-[#D8DADC] flex justify-between items-center bg-[#F7F9FB]">
+                  <h3 className="text-[16px] font-semibold text-[#0A192F]">Notificaciones</h3>
+                  {notificaciones.length > 0 && (
+                    <form action={limpiarNotificaciones}>
+                      <button type="submit" className="text-[12px] text-[#0A192F] font-bold uppercase tracking-widest hover:underline">Marcar leídas</button>
+                    </form>
+                  )}
+                </div>
+                <div className="max-h-64 overflow-y-auto p-2">
+                  {notificaciones.length === 0 ? (
+                    <p className="p-4 text-center text-[14px] text-[#475569]">No hay avisos nuevos.</p>
+                  ) : (
+                    notificaciones.map(notif => (
+                      <div key={notif.id} className="p-3 mb-1 bg-[#F7F9FB] text-[#0A192F] text-[12px] rounded-lg border border-[#D8DADC]">
+                        {notif.tipo === 'REVIEW_SUBMITTED' ? '¡Gracias por tu reseña! ⭐ Hemos enviado el feedback al conductor.' : notif.tipo}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">¿A qué hora?</label>
-            <input type="datetime-local" name="horario" min={minDateTime} defaultValue={minDateTime} required className="w-full p-4 rounded-xl border border-gray-200 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+          {isAdmin && (
+            <Link href="/admin" className="border border-[#0A192F] text-[#0A192F] px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-[#F7F9FB] transition-colors duration-200">
+              Panel Admin
+            </Link>
+          )}
+          <div className="w-[40px] h-[40px] rounded-full border border-[#D8DADC] flex items-center justify-center overflow-hidden bg-white">
+            <UserButton />
           </div>
-          <div>
-            <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">¿Por dónde te buscamos?</label>
-            <input type="text" name="punto_partida" placeholder="Ej: Sarmiento 850, Bahía Blanca" required minLength={5} maxLength={100} className="w-full p-4 rounded-xl border border-gray-200 text-sm font-bold bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" />
+        </div>
+      </nav>
+
+      <main className="py-[40px] px-[24px] md:px-[48px] max-w-4xl mx-auto">
+        
+        <div className="w-full bg-[#FFFFFF] p-[40px] md:p-[48px] rounded-[12px] border border-[#D8DADC] shadow-sm">
+          <header className="mb-8">
+            <Link href="/" className="inline-flex items-center gap-1.5 text-[#475569] hover:text-[#0A192F] text-[12px] font-bold uppercase tracking-widest transition-colors mb-4">
+              <span className="material-symbols-outlined text-[16px]">arrow_back</span> Volver al Dashboard
+            </Link>
+            <h1 className="text-[32px] font-bold text-[#0A192F] tracking-tight">Reservar Asiento</h1>
+            <p className="text-[#475569] text-[16px] mt-1">Complete los detalles para asegurar su lugar en el próximo servicio de WeShuttle.</p>
+          </header>
+
+          <form action={confirmarReserva} className="flex flex-col gap-6">
+            
+            <div>
+              <label className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Destino Final</label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#475569]">map</span>
+                <select name="destino_id" required className="w-full h-[56px] pl-12 pr-4 rounded-[8px] border border-[#D8DADC] text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] appearance-none cursor-pointer">
+                  <option value="">Seleccione su destino...</option>
+                  {destinos.map(d => (
+                    <option key={d.id} value={d.id}>{d.nombre}</option>
+                  ))}
+                </select>
+                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#475569] pointer-events-none">expand_more</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Fecha y Horario de Partida</label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#475569]">calendar_clock</span>
+                  <input type="datetime-local" name="horario" min={minDateTime} defaultValue={minDateTime} required className="w-full h-[56px] pl-12 pr-4 rounded-[8px] border border-[#D8DADC] text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Punto de Recogida</label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#475569]">location_on</span>
+                <input type="text" name="punto_partida" placeholder="Ej: Sarmiento 850, Bahía Blanca" required minLength={5} maxLength={100} pattern=".*[a-zA-ZáéíóúÁÉÍÓÚñÑ].*" title="Debe incluir al menos una letra (Ej: Calle 123)" className="w-full h-[56px] pl-12 pr-4 rounded-[8px] border border-[#D8DADC] text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
+              </div>
+              <p className="text-[12px] text-[#475569] mt-2">Ej: Entrada principal Edificio Titanium</p>
+            </div>
+            
+            <button type="submit" className="w-full h-[56px] bg-[#0A192F] text-white rounded-[8px] text-[14px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm flex items-center justify-center gap-2 mt-2">
+              Confirmar Reserva <span className="material-symbols-outlined text-[20px]">check_circle</span>
+            </button>
+            
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] text-center mt-2">Garantía de puntualidad WeShuttle</p>
+          </form>
+        </div>
+
+        <footer className="mt-12 pt-6 flex flex-col items-center gap-4 text-center">
+          <Link href="#" className="text-[14px] font-medium text-[#0A192F] hover:underline">¿Necesita asistencia especial? Contacte a Logística</Link>
+          <div className="flex gap-4 text-[12px] text-[#475569]">
+            <Link href="#" className="hover:text-[#0A192F]">Términos</Link>
+            <span>|</span>
+            <Link href="#" className="hover:text-[#0A192F]">Privacidad</Link>
           </div>
-          <Button type="submit" variant="primary" size="xl" className="w-full mt-4 hover:bg-blue-600 shadow-md">
-            Confirmar Reserva
-          </Button>
-        </form>
-      </div>
+        </footer>
+      </main>
     </div>
   )
 }
