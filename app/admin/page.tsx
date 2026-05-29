@@ -172,6 +172,16 @@ export default async function GestionViajes({
           <Link href="/" className="text-[#475569] hover:text-[#0A192F] text-[12px] font-bold uppercase tracking-widest">Volver</Link>
         </div>
 
+        {/* MENÚ MÓVIL (Pestañas) - Solo visible en pantallas pequeñas */}
+        <div className="lg:hidden flex gap-2 mb-8 bg-[#FFFFFF] p-1.5 rounded-[10px] border border-[#D8DADC] shadow-sm">
+          <Link href="/admin?tab=logistica" className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-bold rounded-[6px] transition-all ${tab !== 'destinos' ? 'bg-[#0A192F] text-white shadow-sm' : 'text-[#475569] hover:text-[#0A192F] hover:bg-[#F7F9FB]'}`}>
+            <span className="material-symbols-outlined text-[16px]">local_shipping</span> Logística
+          </Link>
+          <Link href="/admin?tab=destinos" className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-bold rounded-[6px] transition-all ${tab === 'destinos' ? 'bg-[#0A192F] text-white shadow-sm' : 'text-[#475569] hover:text-[#0A192F] hover:bg-[#F7F9FB]'}`}>
+            <span className="material-symbols-outlined text-[16px]">map</span> Destinos
+          </Link>
+        </div>
+
         {tab === 'destinos' ? (
           <>
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -249,14 +259,14 @@ export default async function GestionViajes({
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-[32px] font-bold text-[#0A192F] tracking-tight">Monitoreo de Flota</h2>
-                  <div className="relative group cursor-help flex items-center mt-2">
+                  <div className="relative group cursor-help flex items-center mt-2" tabIndex={0}>
                     <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#D8DADC] text-[#0A192F] text-[11px] font-bold hover:bg-[#D8DADC]/80 transition-colors">?</span>
-                    <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-72 p-4 bg-[#0A192F] text-[#D8DADC] text-[12px] font-normal rounded-lg shadow-xl z-50 leading-relaxed">
+                    <div className="fixed left-4 right-4 top-1/2 -translate-y-1/2 sm:absolute sm:top-full sm:left-1/2 sm:-translate-x-1/2 sm:translate-y-0 sm:mt-2 hidden group-hover:block group-focus-within:block w-auto sm:w-72 p-4 bg-[#0A192F] text-[#D8DADC] text-[12px] font-normal rounded-lg shadow-2xl z-[100] leading-relaxed">
                       <p className="mb-2"><strong className="text-white tracking-wide">TOTAL:</strong> Suma absoluta de todos los viajes en el sistema.</p>
                       <p className="mb-2"><strong className="text-white tracking-wide">EN RUTA:</strong> Unidades despachadas ("En camino").</p>
                       <p className="mb-2"><strong className="text-white tracking-wide">PENDIENTES:</strong> Viajes programados esperando salida.</p>
                       <p><strong className="text-white tracking-wide">CANCELADOS:</strong> Viajes anulados por el usuario o el sistema.</p>
-                      <div className="absolute left-1.5 bottom-full border-4 border-transparent border-b-[#0A192F]"></div>
+                      <div className="hidden sm:block absolute left-1/2 -translate-x-1/2 bottom-full border-4 border-transparent border-b-[#0A192F]"></div>
                     </div>
                   </div>
                 </div>
