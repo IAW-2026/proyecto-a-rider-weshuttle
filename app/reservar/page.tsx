@@ -125,7 +125,7 @@ export default async function NuevaReservaPage() {
               <span className="material-symbols-outlined text-[24px]">notifications</span>
               {notificaciones.length > 0 && <span className="absolute top-1 right-1 bg-[#EF4444] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
             </div>
-            <div className="absolute right-0 top-[100%] pt-1 w-[280px] sm:w-72 z-50 hidden group-hover:block group-focus-within:block">
+            <div className="fixed left-4 right-4 top-[72px] sm:absolute sm:top-[100%] sm:left-auto sm:right-0 sm:w-72 z-50 hidden group-hover:block group-focus-within:block sm:pt-1">
               <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-[#D8DADC] flex justify-between items-center bg-[#F7F9FB]">
                   <h3 className="text-[16px] font-semibold text-[#0A192F]">Notificaciones</h3>

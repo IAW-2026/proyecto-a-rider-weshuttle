@@ -88,7 +88,7 @@ export default async function VistaPublicaViajes() {
                   {notificaciones.length > 0 && <span className="absolute top-1 right-1 bg-[#EF4444] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
                 </div>
                 {/* Menú desplegable con puente invisible */}
-                <div className="absolute right-0 top-[100%] pt-1 w-[280px] sm:w-72 z-50 hidden group-hover:block group-focus-within:block">
+                <div className="fixed left-4 right-4 top-[72px] sm:absolute sm:top-[100%] sm:left-auto sm:right-0 sm:w-72 z-50 hidden group-hover:block group-focus-within:block sm:pt-1">
                   <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg shadow-sm overflow-hidden">
                     <div className="p-4 border-b border-[#D8DADC] flex justify-between items-center bg-[#F7F9FB]">
                       <h3 className="text-[16px] font-semibold text-[#0A192F]">Notificaciones</h3>
@@ -199,9 +199,9 @@ export default async function VistaPublicaViajes() {
               <h2 className="text-[20px] font-bold text-[#0A192F]">Combis en Real-Time</h2>
               <div className="relative group cursor-help flex items-center" tabIndex={0}>
                 <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#D8DADC] text-[#0A192F] text-[10px] font-bold hover:bg-[#D8DADC]/80 transition-colors">?</span>
-                <div className="absolute left-0 top-full mt-2 hidden group-hover:block group-focus-within:block w-[260px] sm:w-64 p-3 bg-[#0A192F] text-[#F7F9FB] text-[12px] font-normal rounded-lg shadow-sm z-10 leading-relaxed">
+                <div className="fixed left-4 right-4 top-1/2 -translate-y-1/2 sm:absolute sm:top-full sm:left-1/2 sm:-translate-x-1/2 sm:translate-y-0 sm:mt-2 hidden group-hover:block group-focus-within:block w-auto sm:w-72 p-4 bg-[#0A192F] text-[#F7F9FB] text-[12px] font-normal rounded-lg shadow-2xl z-[100] leading-relaxed">
                   Monitor de partidas para pasajeros. Permite identificar tu vehículo asignado y conocer el estado de la flota en tiempo real.
-                  <div className="absolute left-1.5 bottom-full border-4 border-transparent border-b-[#0A192F]"></div>
+                  <div className="hidden sm:block absolute left-1/2 -translate-x-1/2 bottom-full border-4 border-transparent border-b-[#0A192F]"></div>
                 </div>
               </div>
             </div>
