@@ -160,7 +160,7 @@ export default async function NuevaReservaPage() {
         </div>
       </nav>
 
-      <main className="py-[40px] px-[24px] md:px-[48px] max-w-4xl mx-auto">
+      <main className="py-[40px] px-[24px] md:px-[48px] max-w-4xl mx-auto pb-24 md:pb-8">
         
         <div className="w-full bg-[#FFFFFF] p-[40px] md:p-[48px] rounded-[12px] border border-[#D8DADC] shadow-sm">
           <header className="mb-8">
@@ -176,8 +176,8 @@ export default async function NuevaReservaPage() {
             <div>
               <label className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Destino Final</label>
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#475569]">map</span>
-                <select name="destino_id" required className="w-full h-[56px] pl-12 pr-4 rounded-[8px] border border-[#D8DADC] text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] appearance-none cursor-pointer">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">map</span>
+                <select name="destino_id" required className="w-full min-w-0 h-[56px] pl-10 pr-8 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] appearance-none cursor-pointer truncate">
                   <option value="">Seleccione su destino...</option>
                   {destinos.map(d => (
                     <option key={d.id} value={d.id}>{d.nombre}</option>
@@ -191,8 +191,8 @@ export default async function NuevaReservaPage() {
               <div className="md:col-span-2">
                 <label className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Fecha y Horario de Partida</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#475569]">calendar_clock</span>
-                  <input type="datetime-local" name="horario" min={minDateTime} defaultValue={minDateTime} required className="w-full h-[56px] pl-12 pr-4 rounded-[8px] border border-[#D8DADC] text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">calendar_clock</span>
+                  <input type="datetime-local" name="horario" min={minDateTime} defaultValue={minDateTime} required className="w-full min-w-0 max-w-full h-[56px] pl-10 pr-2 md:pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
                 </div>
               </div>
             </div>
@@ -200,8 +200,8 @@ export default async function NuevaReservaPage() {
             <div>
               <label className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Punto de Recogida</label>
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#475569]">location_on</span>
-                <input type="text" name="punto_partida" placeholder="Ej: Sarmiento 850, Bahía Blanca" required minLength={5} maxLength={100} pattern=".*[a-zA-ZáéíóúÁÉÍÓÚñÑ].*" title="Debe incluir al menos una letra (Ej: Calle 123)" className="w-full h-[56px] pl-12 pr-4 rounded-[8px] border border-[#D8DADC] text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">location_on</span>
+                <input type="text" name="punto_partida" placeholder="Ej: Sarmiento 850" required minLength={5} maxLength={100} pattern=".*[a-zA-ZáéíóúÁÉÍÓÚñÑ].*" title="Debe incluir al menos una letra (Ej: Calle 123)" className="w-full min-w-0 h-[56px] pl-10 pr-2 md:pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
               </div>
               <p className="text-[12px] text-[#475569] mt-2">Ej: Entrada principal Edificio Titanium</p>
             </div>
@@ -223,6 +223,22 @@ export default async function NuevaReservaPage() {
           </div>
         </footer>
       </main>
+
+      {/* NAVEGACIÓN MÓVIL (Bottom Bar estilo App) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 h-[64px] bg-[#FFFFFF] border-t border-[#D8DADC] flex items-center justify-around z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
+        <Link href="/" className="flex flex-col items-center justify-center w-full h-full text-[#475569] hover:text-[#0A192F] active:bg-[#F7F9FB]">
+          <span className="material-symbols-outlined text-[24px]">home</span>
+          <span className="text-[10px] font-bold mt-0.5">Inicio</span>
+        </Link>
+        <Link href="/mis-viajes" className="flex flex-col items-center justify-center w-full h-full text-[#475569] hover:text-[#0A192F] active:bg-[#F7F9FB]">
+          <span className="material-symbols-outlined text-[24px]">directions_bus</span>
+          <span className="text-[10px] font-bold mt-0.5">Viajes</span>
+        </Link>
+        <Link href="/reservar" className="flex flex-col items-center justify-center w-full h-full text-[#0A192F] bg-[#F7F9FB]">
+          <span className="material-symbols-outlined text-[24px] font-bold">add_circle</span>
+          <span className="text-[10px] font-bold mt-0.5">Reservar</span>
+        </Link>
+      </div>
     </div>
   )
 }

@@ -133,7 +133,7 @@ export default async function VistaPublicaViajes() {
       </nav>
 
       {/* CONTENIDO PRINCIPAL */}
-      <main className="p-4 md:p-8 max-w-5xl mx-auto">
+      <main className="p-4 md:p-8 max-w-5xl mx-auto pb-24 md:pb-8">
         
         {/* HEADER WELCOME */}
         <header className="mb-10">
@@ -197,9 +197,9 @@ export default async function VistaPublicaViajes() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-[20px] font-bold text-[#0A192F]">Combis en Real-Time</h2>
-              <div className="relative group cursor-help flex items-center">
+              <div className="relative group cursor-help flex items-center" tabIndex={0}>
                 <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#D8DADC] text-[#0A192F] text-[10px] font-bold hover:bg-[#D8DADC]/80 transition-colors">?</span>
-                <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-[#0A192F] text-[#F7F9FB] text-[12px] font-normal rounded-lg shadow-sm z-10 leading-relaxed">
+                <div className="absolute left-0 top-full mt-2 hidden group-hover:block group-focus-within:block w-64 p-3 bg-[#0A192F] text-[#F7F9FB] text-[12px] font-normal rounded-lg shadow-sm z-10 leading-relaxed">
                   Monitor de partidas para pasajeros. Permite identificar tu vehículo asignado y conocer el estado de la flota en tiempo real.
                   <div className="absolute left-1.5 bottom-full border-4 border-transparent border-b-[#0A192F]"></div>
                 </div>
@@ -258,6 +258,24 @@ export default async function VistaPublicaViajes() {
         </div>
 
       </main>
+
+      {/* NAVEGACIÓN MÓVIL (Bottom Bar estilo App) */}
+      {userId && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 h-[64px] bg-[#FFFFFF] border-t border-[#D8DADC] flex items-center justify-around z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
+          <Link href="/" className="flex flex-col items-center justify-center w-full h-full text-[#475569] hover:text-[#0A192F] active:bg-[#F7F9FB]">
+            <span className="material-symbols-outlined text-[24px]">home</span>
+            <span className="text-[10px] font-bold mt-0.5">Inicio</span>
+          </Link>
+          <Link href="/mis-viajes" className="flex flex-col items-center justify-center w-full h-full text-[#475569] hover:text-[#0A192F] active:bg-[#F7F9FB]">
+            <span className="material-symbols-outlined text-[24px]">directions_bus</span>
+            <span className="text-[10px] font-bold mt-0.5">Viajes</span>
+          </Link>
+          <Link href="/reservar" className="flex flex-col items-center justify-center w-full h-full text-[#475569] hover:text-[#0A192F] active:bg-[#F7F9FB]">
+            <span className="material-symbols-outlined text-[24px]">add_circle</span>
+            <span className="text-[10px] font-bold mt-0.5">Reservar</span>
+          </Link>
+        </div>
+      )}
     </div>
   )
 }

@@ -254,7 +254,7 @@ export default async function MisViajesPage({
         </div>
       </nav>
 
-      <main className="py-[32px] px-[24px] md:px-[48px] max-w-7xl mx-auto">
+      <main className="py-[32px] px-[24px] md:px-[48px] max-w-7xl mx-auto pb-24 md:pb-8">
         
         {/* LAYOUT: DOS COLUMNAS DESIGUALES */}
         <div className="flex flex-col lg:flex-row gap-8 items-start">
@@ -470,6 +470,22 @@ export default async function MisViajesPage({
         </div>
 
       </main>
+
+      {/* NAVEGACIÓN MÓVIL (Bottom Bar estilo App) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 h-[64px] bg-[#FFFFFF] border-t border-[#D8DADC] flex items-center justify-around z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
+        <Link href="/" className="flex flex-col items-center justify-center w-full h-full text-[#475569] hover:text-[#0A192F] active:bg-[#F7F9FB]">
+          <span className="material-symbols-outlined text-[24px]">home</span>
+          <span className="text-[10px] font-bold mt-0.5">Inicio</span>
+        </Link>
+        <Link href="/mis-viajes" className="flex flex-col items-center justify-center w-full h-full text-[#0A192F] bg-[#F7F9FB]">
+          <span className="material-symbols-outlined text-[24px] font-bold">directions_bus</span>
+          <span className="text-[10px] font-bold mt-0.5">Viajes</span>
+        </Link>
+        <Link href="/reservar" className="flex flex-col items-center justify-center w-full h-full text-[#475569] hover:text-[#0A192F] active:bg-[#F7F9FB]">
+          <span className="material-symbols-outlined text-[24px]">add_circle</span>
+          <span className="text-[10px] font-bold mt-0.5">Reservar</span>
+        </Link>
+      </div>
     </div>
   )
 }
