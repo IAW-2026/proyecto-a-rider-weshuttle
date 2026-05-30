@@ -137,7 +137,7 @@ export default async function VistaPublicaViajes() {
         
         {/* HEADER WELCOME */}
         <header className="mb-10">
-          <h2 className="text-[32px] font-bold text-[#0A192F] mb-2 tracking-tight">Bienvenido, {displayName}</h2>
+          <h2 className="text-[32px] font-bold text-[#0A192F] mb-2 tracking-tight">Bienvenido/a, {displayName}</h2>
           <p className="text-[#475569] text-[16px] max-w-2xl">Gestiona tus traslados corporativos con precisión y facilidad. Visualiza el estado de la flota en tiempo real.</p>
         </header>
 

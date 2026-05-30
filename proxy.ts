@@ -1,10 +1,10 @@
 
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)']);
+const isPublicRoute = createRouteMatcher(['/', '/sign-in(.*)', '/sign-up(.*)']);
 
-export const proxy = clerkMiddleware(async (auth, request) => {
-  // Si la ruta NO empieza con /sign-in o /sign-up, entonces pedí login
+export default clerkMiddleware(async (auth, request) => {
+  // Si la ruta NO es pública (/, /sign-in o /sign-up), entonces pedí login
   if (!isPublicRoute(request)) {
     await auth.protect();
   }
