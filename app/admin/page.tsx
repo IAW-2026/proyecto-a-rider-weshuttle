@@ -29,9 +29,9 @@ async function actualizarDestino(formData: FormData) {
     throw new Error("Datos inválidos. El nombre del destino y su ubicación son obligatorios.")
   }
 
-  await prisma.destino.update({
+  await prisma.destination.update({
     where: { id },
-    data: { nombre, ubicacion_lat_long }
+    data: { name: nombre, address: ubicacion_lat_long, lat: 0, lng: 0 }
   })
   revalidatePath('/admin')
 }
@@ -111,9 +111,9 @@ export default async function GestionViajes({
   const tab = typeof params?.tab === 'string' ? params.tab : 'logistica'; // Leemos la pestaña
 
   // TRAEMOS SOLO LA DATA DE LA PESTAÑA ACTIVA PARA QUE SEA RÁPIDO
-  const destinos = tab === 'destinos' ? await prisma.destino.findMany({
-    where: { nombre: { contains: query, mode: 'insensitive' } },
-    orderBy: { nombre: 'asc' }
+  const destinos = tab === 'destinos' ? await prisma.destination.findMany({
+    where: { name: { contains: query, mode: 'insensitive' } },
+    orderBy: { name: 'asc' }
   }) : [];
 
   const viajes = tab !== 'destinos' ? await prisma.pool.findMany({
@@ -228,10 +228,10 @@ export default async function GestionViajes({
                           <form id={`form-${destino.id}`} action={actualizarDestino} className="hidden">
                             <input type="hidden" name="id" value={destino.id} />
                           </form>
-                          <input form={`form-${destino.id}`} name="nombre" defaultValue={destino.nombre} className="w-full px-3 py-2 border border-[#D8DADC] rounded-[6px] text-[13px] font-semibold text-[#0A192F] focus:outline-none focus:border-[#0A192F]" required />
+                          <input form={`form-${destino.id}`} name="nombre" defaultValue={destino.name} className="w-full px-3 py-2 border border-[#D8DADC] rounded-[6px] text-[13px] font-semibold text-[#0A192F] focus:outline-none focus:border-[#0A192F]" required />
                         </td>
                         <td className="px-6 py-4">
-                          <input form={`form-${destino.id}`} name="ubicacion" defaultValue={destino.ubicacion_lat_long} className="w-full px-3 py-2 border border-[#D8DADC] rounded-[6px] text-[12px] font-mono text-[#475569] focus:outline-none focus:border-[#0A192F]" required />
+                          <input form={`form-${destino.id}`} name="ubicacion" defaultValue={destino.address} className="w-full px-3 py-2 border border-[#D8DADC] rounded-[6px] text-[12px] font-mono text-[#475569] focus:outline-none focus:border-[#0A192F]" required />
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button form={`form-${destino.id}`} type="submit" className="text-[#3B82F6] hover:text-[#2563EB] bg-[#3B82F6]/10 px-4 py-2 rounded-[6px] text-[11px] font-bold uppercase tracking-widest hover:bg-[#3B82F6]/20 transition-colors shadow-sm">

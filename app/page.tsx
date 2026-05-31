@@ -4,41 +4,42 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import { UserButton } from "@clerk/nextjs"
 import { revalidatePath } from 'next/cache'
 
-// Esta página NO es estática, se recarga con la base de datos
 export const dynamic = 'force-dynamic'
 
 export default async function VistaPublicaViajes() {
-  // 1. Traemos los viajes de la tabla Pool
+  // Obtenemos los viajes activos para el monitor de flota público
   const viajes = await prisma.pool.findMany({
     where: { estado: { not: 'Cancelado' } },
     orderBy: { id: 'desc' }
   })
 
-  // 2. Verificamos si hay un usuario logueado
+  // Verificamos si hay un usuario logueado
   const { userId } = await auth()
   const user = await currentUser()
-  const isAdmin = user?.emailAddresses[0]?.emailAddress === process.env.ADMIN_EMAIL
+  const userEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase() ?? '';
+  const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map(e => e.trim().toLowerCase());
+  const isAdmin = adminEmailsList.includes(userEmail);
 
-  // 3. Traemos las notificaciones
-  const notificaciones = userId ? await prisma.notificacion.findMany({
-    where: { clerk_user_id: userId, read_at: null },
+  const notificaciones = userId ? await prisma.passengerNotification.findMany({
+    where: { passenger_user_id: userId, read_at: null },
     orderBy: { id: 'desc' }
   }) : []
 
-  // 4. Traemos el próximo viaje real y el contador de finalizados
+  // Buscamos el próximo viaje programado del usuario (si está logueado)
   const ahora = new Date()
-  const proximoViaje = userId ? await prisma.reserva.findFirst({
+  const proximoViaje = userId ? await prisma.reservation.findFirst({
     where: {
-      clerk_user_id: userId,
-      estado_reserva: { in: ['PENDING_DRIVER', 'CONFIRMED'] },
-      horario: { gte: ahora }
+      passenger_user_id: userId,
+      status: { in: ['PENDING_DRIVER', 'CONFIRMED'] },
+      departure_time: { gte: ahora }
     },
-    include: { destino: true },
-    orderBy: { horario: 'asc' }
+    include: { destination: true },
+    orderBy: { departure_time: 'asc' }
   }) : null;
 
-  const viajesRealizados = userId ? await prisma.reserva.count({
-    where: { clerk_user_id: userId, estado_reserva: 'PAID' }
+  // Contamos cuántos viajes completó el usuario
+  const viajesRealizados = userId ? await prisma.reservation.count({
+    where: { passenger_user_id: userId, status: 'PAID' }
   }) : 0;
 
   const emailName = user?.emailAddresses[0]?.emailAddress?.split('@')[0];
@@ -49,8 +50,8 @@ export default async function VistaPublicaViajes() {
     'use server'
     const { userId: actionUserId } = await auth()
     if (actionUserId) {
-      await prisma.notificacion.updateMany({
-        where: { clerk_user_id: actionUserId, read_at: null },
+      await prisma.passengerNotification.updateMany({
+        where: { passenger_user_id: actionUserId, read_at: null },
         data: { read_at: new Date() }
       })
       revalidatePath('/')
@@ -104,7 +105,7 @@ export default async function VistaPublicaViajes() {
                       ) : (
                         notificaciones.map(notif => (
                           <div key={notif.id} className="p-3 mb-1 bg-[#F7F9FB] text-[#0A192F] text-[12px] rounded-lg border border-[#D8DADC]">
-                            {notif.tipo === 'REVIEW_SUBMITTED' ? '¡Gracias por tu reseña! ⭐ Hemos enviado el feedback al conductor.' : notif.tipo}
+                            {notif.message}
                           </div>
                         ))
                       )}
@@ -162,10 +163,10 @@ export default async function VistaPublicaViajes() {
                 {proximoViaje ? (
                   <div className="flex flex-col gap-3">
                     <div className="overflow-hidden">
-                      <h3 className="text-[18px] font-bold text-[#0A192F] leading-tight truncate">{proximoViaje.punto_de_partida}</h3>
-                      <h3 className="text-[18px] font-bold text-[#475569] leading-tight truncate">→ {proximoViaje.destino.nombre}</h3>
+                      <h3 className="text-[18px] font-bold text-[#0A192F] leading-tight truncate">{proximoViaje.pickup_address}</h3>
+                      <h3 className="text-[18px] font-bold text-[#475569] leading-tight truncate">→ {proximoViaje.destination.name}</h3>
                       <p className="text-[13px] text-[#475569] mt-3 flex items-center gap-1.5 font-medium">
-                        <span className="material-symbols-outlined text-[16px]">schedule</span> {new Date(proximoViaje.horario).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} hs
+                        <span className="material-symbols-outlined text-[16px]">schedule</span> {new Date(proximoViaje.departure_time).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} hs
                       </p>
                     </div>
                   <Link href={`/mis-viajes?viaje_id=${proximoViaje.id}&from=home`} className="mt-1 inline-flex items-center justify-center gap-1 text-[#0A192F] text-[12px] font-bold uppercase hover:bg-[#e2e8f0] bg-[#F7F9FB] border border-[#D8DADC] px-4 py-2.5 rounded-lg transition-colors w-full">

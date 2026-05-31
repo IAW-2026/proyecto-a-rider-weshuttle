@@ -13,33 +13,33 @@ export async function GET(
     const statusFilter = searchParams.get('status')
 
     // Buscamos las reservas para este pool
-    const reservas = await prisma.reserva.findMany({
+    const reservas = await prisma.reservation.findMany({
       where: {
         pool_id: pool_id,
         // Si nos pasan status, filtramos por ese. Si no, traemos todas las no canceladas/denegadas.
-        estado_reserva: statusFilter ? (statusFilter as any) : { in: ['CONFIRMED', 'PAID', 'PENDING_DRIVER'] }
+        status: statusFilter ? (statusFilter as any) : { in: ['CONFIRMED', 'PAID', 'PENDING_DRIVER'] }
       },
       include: {
-        pasajero: true,
-        destino: true
+        passenger: true,
+        destination: true
       }
     });
 
     // Formateamos la respuesta EXACTAMENTE como lo pide el contrato de la API
     const pasajerosFormateados = reservas.map(res => ({
       reservation_id: res.id,
-      passenger_user_id: res.clerk_user_id,
-      passenger_name: res.pasajero.nombre || 'Pasajero',
-      reservation_status: res.estado_reserva,
+      passenger_user_id: res.passenger_user_id,
+      passenger_name: res.passenger.full_name || 'Pasajero',
+      reservation_status: res.status,
       pickup_point: {
-        address: res.punto_de_partida,
-        lat: -38.718, // Mock (en tu BD tenés solo el string de partida)
-        lng: -62.266  // Mock
+        address: res.pickup_address,
+        lat: res.pickup_lat || -38.718, // Extraemos real o enviamos mock
+        lng: res.pickup_lng || -62.266  
       },
-      destination_id: res.destino.id,
-      departure_time: res.horario.toISOString(),
-      max_price: res.precio_maximo,
-      effective_price: res.precio_efectivo
+      destination_id: res.destination.id,
+      departure_time: res.departure_time.toISOString(),
+      max_price: res.max_price,
+      effective_price: res.effective_price
     }));
 
     return NextResponse.json({ 

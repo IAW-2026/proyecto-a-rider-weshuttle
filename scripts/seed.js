@@ -4,7 +4,7 @@ const { Pool } = require('pg')
 const { PrismaPg } = require('@prisma/adapter-pg')
 
 // Cargar variables de entorno
-config() // Ahora lee de tu archivo .env directamente
+config({ path: ['.env.local', '.env'] }) // Lee tus configuraciones
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 const prismaAdapter = new PrismaPg(pool)
@@ -15,30 +15,26 @@ const prisma = new PrismaClient({
 })
 
 async function main() {
-  console.log('🧹 Limpiando base de datos (Destinos y Reservas)...')
+  console.log('🧹 Limpiando base de datos...')
 
-  await prisma.reserva.deleteMany()
+  await prisma.passengerNotification.deleteMany()
+  await prisma.reservation.deleteMany()
+  await prisma.passenger.deleteMany()
   await prisma.pool.deleteMany()
-  const deletedCount = await prisma.destino.deleteMany()
+  const deletedCount = await prisma.destination.deleteMany()
   console.log(`✅ Eliminados ${deletedCount.count} destinos`)
 
   console.log('🌱 Inyectando destinos predeterminados...')
   
   const destinos = await Promise.all([
-    prisma.destino.create({
-      data: { nombre: 'Polo Petroquímico', ubicacion_lat_long: '-38.7964, -62.2694' }
-    }),
-    prisma.destino.create({
-      data: { nombre: 'Puerto de Ingeniero White', ubicacion_lat_long: '-38.7842, -62.2667' }
-    }),
-    prisma.destino.create({
-      data: { nombre: 'Parque Industrial', ubicacion_lat_long: '-38.7753, -62.2709' }
-    })
+    prisma.destination.create({ data: { name: 'Polo Petroquímico', address: 'Ruta Nacional 3, Km 578', lat: -38.7964, lng: -62.2694, active: true } }),
+    prisma.destination.create({ data: { name: 'Puerto de Ingeniero White', address: 'Puerto Ing. White', lat: -38.7842, lng: -62.2667, active: true } }),
+    prisma.destination.create({ data: { name: 'Parque Industrial', address: 'Parque Industrial, Calle 1', lat: -38.7753, lng: -62.2709, active: true } })
   ])
 
   console.log('✅ ¡Destinos creados exitosamente!')
   destinos.forEach(d => {
-    console.log(`  📍 ${d.nombre} (${d.ubicacion_lat_long})`)
+    console.log(`  📍 ${d.name} (${d.address})`)
   })
 
   console.log('🚐 Inyectando viajes de prueba (Pools)...')
