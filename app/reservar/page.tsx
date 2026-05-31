@@ -7,11 +7,11 @@ import { UserButton } from "@clerk/nextjs"
 import { revalidatePath } from 'next/cache'
 
 export default async function NuevaReservaPage() {
-  // Protegemos la página al entrar
+  // 1. Verificamos que el usuario esté autenticado
   const { userId } = await auth()
   if (!userId) redirect('/sign-in')
 
-  // Traemos los destinos reales de la base de datos
+  // 2. Obtenemos datos necesarios para el formulario
   const destinos = await prisma.destino.findMany()
   const user = await currentUser()
   const isAdmin = user?.emailAddresses[0]?.emailAddress === process.env.ADMIN_EMAIL
@@ -21,44 +21,40 @@ export default async function NuevaReservaPage() {
     orderBy: { id: 'desc' }
   }) : []
 
-  // --- SERVER ACTION: Lo que pasa al tocar "Confirmar" ---
+  // --- SERVER ACTION: Procesar la nueva reserva ---
   async function confirmarReserva(formData: FormData) {
     'use server'
     const destino_id = formData.get('destino_id') as string
     const horario = formData.get('horario') as string
     const punto_partida = formData.get('punto_partida') as string
 
-    // SEGURIDAD (Backend): Validamos que los datos no estén vacíos, puros espacios, y que sea una dirección real (tenga letras)
+    // Validación básica de los datos ingresados
     const tieneLetras = /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(punto_partida || '');
     if (!destino_id || !horario || !punto_partida || punto_partida.trim().length < 5 || !tieneLetras) {
       throw new Error("Datos inválidos. El punto de recogida debe ser una dirección real (ej: Calle 123).")
     }
 
-    // Buscamos al usuario de Clerk RECIÉN cuando se ejecuta la acción
     const { userId: actionUserId } = await auth()
     const actionUser = await currentUser()
     if (!actionUserId || !actionUser) return
 
-    // El string de horario viene sin zona horaria. Le avisamos a Node que es hora de Argentina (-03:00)
-    // para que lo valide y lo guarde correctamente en la base de datos.
+    // Regla de Negocio: Las reservas deben hacerse con al menos 2 horas de anticipación
     const fechaViaje = new Date(`${horario}-03:00`)
-    // Margen operativo: La reserva debe hacerse con al menos 2 horas de anticipación
-    // (Le damos 5 minutos de gracia por si el usuario tardó en llenar el formulario)
     const fechaMinima = new Date(Date.now() + 2 * 60 * 60 * 1000 - 5 * 60 * 1000)
     if (fechaViaje < fechaMinima) {
       throw new Error("Error de negocio: Las reservas deben realizarse con al menos 2 horas de anticipación.")
     }
 
-    // 1. Consultamos a las APIs amigas (Mocks por ahora)
+    // Simulación de consulta a microservicios externos
     const paymentsData = await fetchPaymentsAppPricingMock()
     const driverData = await createDriverAppPoolMock()
 
-    // NUEVO: Validación de lógica de negocio (Disponibilidad)
+    // Regla de Negocio: Verificar que haya asientos disponibles
     if (driverData.current_passengers >= driverData.max_capacity) {
       throw new Error("Error de negocio: No hay asientos disponibles en la unidad para este horario y destino.")
     }
 
-    // 2. Asegurarnos de que el Pasajero exista en nuestra base de datos
+    // Registramos al usuario en nuestra base de datos si es su primera vez
     await prisma.pasajero.upsert({
       where: { clerk_user_id: actionUserId },
       update: {},
@@ -70,30 +66,28 @@ export default async function NuevaReservaPage() {
       }
     })
 
-    // 3. Crear la reserva inmutable guardando los datos de las APIs externas
+    // Creamos la reserva inmutable con los datos obtenidos
     await prisma.reserva.create({
       data: {
         clerk_user_id: actionUserId,
         destino_id: destino_id,
-        horario: fechaViaje, // ¡Usamos la fecha con la zona horaria corregida para que Vercel no la rompa!
+        horario: fechaViaje,
         punto_de_partida: punto_partida,
         estado_reserva: 'PENDING_DRIVER',
-        precio_maximo: paymentsData.max_price, // Guardamos el Snapshot del precio!
-        pool_id: driverData.pool_id // Lo asociamos a la combi de la Driver App!
+        precio_maximo: paymentsData.max_price,
+        pool_id: driverData.pool_id
       }
     })
 
-    // 4. Al terminar lo mandamos a ver su ticket
     redirect('/mis-viajes')
   }
 
-  // Calculamos la hora actual en Argentina (UTC-3) para bloquear fechas pasadas en el calendario
+  // Calculamos la hora mínima permitida para el input date (ahora + 2hs)
   const ahoraUtc = new Date()
-  // Le restamos 3 horas (por Arg) y le SUMAMOS 2 horas de margen operativo
   const minArgConMargen = new Date(ahoraUtc.getTime() - 3 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000) 
   const minDateTime = minArgConMargen.toISOString().slice(0, 16)
 
-  // --- SERVER ACTION: Marcar notificaciones como leídas ---
+  // --- SERVER ACTION: Limpiar notificaciones ---
   async function limpiarNotificaciones() {
     'use server'
     const { userId: actionUserId } = await auth()

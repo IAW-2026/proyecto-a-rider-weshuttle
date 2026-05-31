@@ -1,6 +1,6 @@
 # 🛸 WeShuttle - Rider App
 
-Plataforma de reservas y logística para pasajeros. Esta aplicación forma parte del ecosistema distribuido WeShuttle, permitiendo a los usuarios finales reservar asientos en combis, gestionar su historial de viajes y simular la interacción con el resto de los microservicios.
+Aplicación orientada a usuarios finales (pasajeros) para la plataforma B2B de movilidad corporativa WeShuttle. Permite la reserva de asientos, visualización de flota en tiempo real y gestión del ciclo de vida de los viajes.
 
 ## 🚀 Enlace de Producción (Deploy)
 **🔗 https://proyecto-a-rider-weshuttle.vercel.app**
@@ -9,32 +9,16 @@ Plataforma de reservas y logística para pasajeros. Esta aplicación forma parte
 
 ## 🔑 Credenciales de Acceso
 
-Para evaluar la aplicación con los datos pre-cargados (reservas creadas, canceladas, completadas), por favor utilizar las siguientes credenciales:
+Para evaluar la plataforma con datos precargados, utilizar las siguientes credenciales (Autenticación gestionada mediante Clerk):
 
-**1. Usuario Administrador (Acceso al Panel Logístico y Vista Pública):**
-* **Email:** [TU_EMAIL_ADMINISTRADOR_AQUI@gmail.com]
-* **Contraseña:** [TU_CONTRASEÑA_AQUI]
-*(O ingresar directamente mediante el botón de OAuth de Google si corresponde a esta cuenta).*
-
-**2. Usuario Pasajero (Solo Vista Pública y Mis Viajes):**
-* **Email:** [OTRO_EMAIL_PASAJERO_AQUI@gmail.com]
-* **Contraseña:** [TU_CONTRASEÑA_AQUI]
+| Perfil | Email | Contraseña | Vistas Accesibles |
+| :--- | :--- | :--- | :--- |
+| **Administrador** | admin@weshuttle.com | Weshuttle2024! | Vista Pública, Mis Viajes, Panel Logístico (Admin) |
+| **Pasajero** | pasajero@weshuttle.com | Weshuttle2024! | Vista Pública, Mis Viajes |
 
 ---
 
-## 🛠️ Tecnologías Utilizadas
-* **Framework:** Next.js 14 (App Router)
-* **Base de Datos:** PostgreSQL (Neon DB) + Prisma ORM
-* **Autenticación:** Clerk Auth
-* **Estilos:** Tailwind CSS
+## ⚙️ Notas de Arquitectura e Integración
 
-## ✨ Requisitos Cumplidos (Checklist)
-- [x] **Páginas Next.js:** UI responsiva y componentes reutilizables.
-- [x] **API Propia REST:** Endpoints expuestos (`/passengers`, `/cancellations`, `/feedback`, etc.).
-- [x] **PostgreSQL propia:** Esquema independiente con Prisma.
-- [x] **Autenticación:** Login/Logout obligatorio mediante Clerk.
-- [x] **Panel de Administración:** Gestión CRUD de viajes y combis.
-- [x] **Búsqueda y Paginación:** Filtrado por estado de viaje en URL (`?query=`).
-- [x] **Manejo de Errores:** Archivos `error.tsx` implementados.
-- [x] **API Externa:** Consumo de mocks simulando la Driver App, Payments App y Feedback App.
-- [x] **Datos Cargados:** Base de datos productiva sembrada (Seed) y con historial de uso real.
+* **Microservicios y APIs Externas:** Al ser parte de un ecosistema distribuido, la comunicación con la *Driver App*, *Payments App* y *Feedback App* se encuentra **mockeada** (`lib/api.ts`). Se simulan las interacciones asíncronas y los Webhooks mediante Server Actions para validar el ciclo de vida de la reserva, quedando pendiente la integración de las URLs productivas definitivas.
+* **Seguridad de APIs Propias:** Los endpoints REST internos expuestos se encuentran funcionales para consumo, quedando programado para una próxima iteración (v2.0) la implementación de Rate Limiting y validación estricta de Tokens/API Keys.

@@ -24,20 +24,18 @@ export default async function MisViajesPage({
   })
 
   const ahora = new Date()
-  const ITEMS_PER_PAGE = 5 // Mostramos 5 viajes por página en el historial
+  const ITEMS_PER_PAGE = 5
   
-  // Leer el número de página desde la URL (ej: ?page=2)
+  // Configuración de la paginación
   const params = await searchParams;
   const pageParam = params?.page;
   const currentPage = Number(Array.isArray(pageParam) ? pageParam[0] : pageParam) || 1
   const skip = (currentPage - 1) * ITEMS_PER_PAGE
   
-  // Vemos si en la URL nos pasaron un viaje específico (Modo Detalle)
   const viajeIdParam = typeof params?.viaje_id === 'string' ? params.viaje_id : undefined;
   const fromParam = typeof params?.from === 'string' ? params.from : undefined;
 
-  // 1. VIAJES ACTIVOS O MODO DETALLE
-  // Si nos pasan un ID por URL, traemos ese viaje sin importar su estado o fecha.
+  // Obtenemos los viajes activos del usuario (o el viaje específico del detalle)
   const viajesActivos = await prisma.reserva.findMany({
     where: viajeIdParam 
       ? { clerk_user_id: userId, id: viajeIdParam } 
@@ -50,11 +48,10 @@ export default async function MisViajesPage({
     orderBy: { horario: 'asc' }
   })
   
-  // 2. HISTORIAL PAGINADO (Buscamos directo en la BD los pasados o cancelados)
   let historial: any[] = [];
   let totalHistorial = 0;
 
-  // Solo cargamos el historial si NO estamos en la "Vista de Detalle"
+  // Si NO estamos en detalle, cargamos el historial paginado
   if (!viajeIdParam) {
     const [h, t] = await Promise.all([
       prisma.reserva.findMany({ 
@@ -83,25 +80,25 @@ export default async function MisViajesPage({
   // --- SERVER ACTION: Cancelar Reserva ---
   async function cancelarReserva(formData: FormData) {
     'use server'
-    // Buscamos el usuario ADENTRO de la acción para que Next.js no se confunda y explote
     const { userId: actionUserId } = await auth()
     const id = formData.get('reserva_id') as string
 
-    // Si el viaje ya tenía combi (pool_id), cumplimos el contrato avisando a la Driver App
     const reserva = await prisma.reserva.findFirst({
       where: { id: id, clerk_user_id: actionUserId || '' }
     })
 
+    // Verificamos que el viaje no haya expirado
     if (!reserva) return;
     if (new Date(reserva.horario) < new Date()) {
       throw new Error("No se puede cancelar un viaje que ya expiró.");
     }
 
+    // Avisamos a la Driver App que liberamos el asiento
     if (reserva?.pool_id) {
       await cancelReservationMock(reserva.pool_id, id)
     }
 
-    // SEGURIDAD: Usamos updateMany para exigir que el id de la reserva coincida con tu usuario
+    // Actualizamos el estado en nuestra base de datos
     await prisma.reserva.updateMany({
       where: { id: id, clerk_user_id: actionUserId || '' },
       data: { estado_reserva: 'CANCELED' }
@@ -109,7 +106,7 @@ export default async function MisViajesPage({
     revalidatePath('/mis-viajes')
   }
 
-  // --- SERVER ACTIONS DE SIMULACIÓN (Dev Mode) --- //
+  // --- SERVER ACTIONS SIMULADAS (Dev Mode / Mocks) ---
   async function simularConfirmacion(formData: FormData) {
     'use server'
     const id = formData.get('reserva_id') as string
@@ -119,13 +116,12 @@ export default async function MisViajesPage({
       throw new Error("El viaje ya expiró y no puede ser confirmado.");
     }
 
-    // Consumimos el mock de la API de la Driver App en lugar de hardcodearlo
+    // Obtenemos los datos simulados de los otros microservicios
     const driverData = await getDriverAppAssignedDriverMock("pool_abc123");
-    // Consumimos el mock de la Feedback App para saber las estrellas de ESE conductor
     const ratingData = await getFeedbackAppRatingMock(driverData.driver.driver_user_id);
-    // Consumimos Driver App para saber el estado real y oficial de ocupación
     const poolStatusData = await getDriverAppPoolStatusMock("pool_abc123");
     
+    // Creamos el "snapshot" (foto inmutable) de la asignación
     const driverSnapshot = {
       nombre: driverData.driver.full_name,
       patente: driverData.vehicle.license_plate,
@@ -153,9 +149,10 @@ export default async function MisViajesPage({
       throw new Error("El viaje ya expiró y no puede ser pagado.");
     }
 
-    // Consumimos el mock de la Payments App para no hardcodear el precio
+    // Obtenemos el precio estimado real simulando consulta a la Payments App
     const paymentsData = await fetchPaymentsAppPricingMock()
 
+    // Actualizamos la reserva a CONFIRMADA
     await prisma.reserva.update({
       where: { id },
       data: { estado_reserva: 'PAID', precio_efectivo: paymentsData.estimated_price } 
@@ -163,16 +160,15 @@ export default async function MisViajesPage({
     revalidatePath('/mis-viajes')
   }
 
-  // --- SERVER ACTION: Simular Feedback ---
+  // --- SERVER ACTION: Enviar reseña y crear notificación ---
   async function enviarFeedback(formData: FormData) {
     'use server'
     try {
       const id = formData.get('reserva_id') as string
       const { userId: actionUserId } = await auth()
       
-      // Si hay internet y todo va bien, guarda la notificación
       if (actionUserId) {
-        // Consumimos el Mock de la API externa centralizado
+        // Enviamos feedback (Mock)
         await submitFeedbackMock(id, actionUserId)
 
         await prisma.notificacion.create({
@@ -185,7 +181,7 @@ export default async function MisViajesPage({
     revalidatePath('/mis-viajes')
   }
 
-  // --- SERVER ACTION: Marcar notificaciones como leídas ---
+  // --- SERVER ACTION: Limpiar notificaciones ---
   async function limpiarNotificaciones() {
     'use server'
     const { userId: actionUserId } = await auth()

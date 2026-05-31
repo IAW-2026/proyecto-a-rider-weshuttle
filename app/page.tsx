@@ -4,28 +4,26 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import { UserButton } from "@clerk/nextjs"
 import { revalidatePath } from 'next/cache'
 
-// Esta página NO es estática, se recarga con la base de datos
 export const dynamic = 'force-dynamic'
 
 export default async function VistaPublicaViajes() {
-  // 1. Traemos los viajes de la tabla Pool
+  // Obtenemos los viajes activos para el monitor de flota público
   const viajes = await prisma.pool.findMany({
     where: { estado: { not: 'Cancelado' } },
     orderBy: { id: 'desc' }
   })
 
-  // 2. Verificamos si hay un usuario logueado
+  // Verificamos si hay un usuario logueado
   const { userId } = await auth()
   const user = await currentUser()
   const isAdmin = user?.emailAddresses[0]?.emailAddress === process.env.ADMIN_EMAIL
 
-  // 3. Traemos las notificaciones
   const notificaciones = userId ? await prisma.notificacion.findMany({
     where: { clerk_user_id: userId, read_at: null },
     orderBy: { id: 'desc' }
   }) : []
 
-  // 4. Traemos el próximo viaje real y el contador de finalizados
+  // Buscamos el próximo viaje programado del usuario (si está logueado)
   const ahora = new Date()
   const proximoViaje = userId ? await prisma.reserva.findFirst({
     where: {
@@ -37,6 +35,7 @@ export default async function VistaPublicaViajes() {
     orderBy: { horario: 'asc' }
   }) : null;
 
+  // Contamos cuántos viajes completó el usuario
   const viajesRealizados = userId ? await prisma.reserva.count({
     where: { clerk_user_id: userId, estado_reserva: 'PAID' }
   }) : 0;
