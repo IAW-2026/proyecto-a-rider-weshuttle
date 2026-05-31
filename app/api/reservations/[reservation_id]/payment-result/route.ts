@@ -14,7 +14,7 @@ export async function PATCH(
     }
 
     // Buscamos la reserva
-    const reserva = await prisma.reserva.findUnique({
+    const reserva = await prisma.reservation.findUnique({
       where: { id: reservation_id }
     });
 
@@ -23,11 +23,11 @@ export async function PATCH(
     }
 
     // Evitamos pisar estados si ya estaba cancelada o procesada
-    if (reserva.estado_reserva === 'CANCELED' || reserva.estado_reserva === 'DENIED') {
+    if (reserva.status === 'CANCELED' || reserva.status === 'DENIED') {
       return NextResponse.json({ error: "CONFLICT", message: "La reserva ya está en un estado final incompatible." }, { status: 409 });
     }
 
-    let newStatus: any = reserva.estado_reserva;
+    let newStatus: any = reserva.status;
 
     if (body.payment_status === 'PAID') {
       newStatus = 'PAID';
@@ -38,16 +38,17 @@ export async function PATCH(
     }
 
     // Actualizamos la reserva en la base de datos
-    await prisma.reserva.update({
+    await prisma.reservation.update({
       where: { id: reservation_id },
-      data: { estado_reserva: newStatus as any }
+      data: { status: newStatus as any }
     });
 
     // Le enviamos una notificación al pasajero
-    await prisma.notificacion.create({
+    await prisma.passengerNotification.create({
       data: {
-        clerk_user_id: reserva.clerk_user_id,
-        tipo: body.payment_status === 'PAID' ? 'PAYMENT_SUCCESS: Tu pago fue procesado con éxito.' : 'PAYMENT_DENIED: Tu pago fue rechazado.'
+        passenger_user_id: reserva.passenger_user_id,
+        type: body.payment_status === 'PAID' ? 'PAYMENT_SUCCESS' : 'PAYMENT_DENIED',
+        message: body.payment_status === 'PAID' ? 'Tu pago fue procesado con éxito.' : 'Tu pago fue rechazado.'
       }
     });
 

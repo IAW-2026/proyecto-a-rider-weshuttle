@@ -18,8 +18,8 @@ export default async function MisViajesPage({
   if (!userId) redirect('/sign-in')
   const isAdmin = user?.emailAddresses[0]?.emailAddress === process.env.ADMIN_EMAIL
 
-  const notificaciones = await prisma.notificacion.findMany({
-    where: { clerk_user_id: userId, read_at: null },
+  const notificaciones = await prisma.passengerNotification.findMany({
+    where: { passenger_user_id: userId, read_at: null },
     orderBy: { id: 'desc' }
   })
 
@@ -36,16 +36,16 @@ export default async function MisViajesPage({
   const fromParam = typeof params?.from === 'string' ? params.from : undefined;
 
   // Obtenemos los viajes activos del usuario (o el viaje específico del detalle)
-  const viajesActivos = await prisma.reserva.findMany({
+  const viajesActivos = await prisma.reservation.findMany({
     where: viajeIdParam 
-      ? { clerk_user_id: userId, id: viajeIdParam } 
+      ? { passenger_user_id: userId, id: viajeIdParam } 
       : { 
-          clerk_user_id: userId, 
-          estado_reserva: { in: ['PENDING_DRIVER', 'CONFIRMED'] },
-          horario: { gte: ahora } 
+          passenger_user_id: userId, 
+          status: { in: ['PENDING_DRIVER', 'CONFIRMED'] },
+          departure_time: { gte: ahora } 
         },
-    include: { destino: true },
-    orderBy: { horario: 'asc' }
+    include: { destination: true },
+    orderBy: { departure_time: 'asc' }
   })
   
   let historial: any[] = [];
@@ -54,20 +54,20 @@ export default async function MisViajesPage({
   // Si NO estamos en detalle, cargamos el historial paginado
   if (!viajeIdParam) {
     const [h, t] = await Promise.all([
-      prisma.reserva.findMany({ 
+      prisma.reservation.findMany({ 
         where: {
-          clerk_user_id: userId,
-          OR: [{ horario: { lt: ahora } }, { estado_reserva: { in: ['CANCELED', 'PAID', 'DENIED'] } }]
+          passenger_user_id: userId,
+          OR: [{ departure_time: { lt: ahora } }, { status: { in: ['CANCELED', 'PAID', 'DENIED'] } }]
         }, 
-        include: { destino: true }, 
-        orderBy: { horario: 'desc' }, 
+        include: { destination: true }, 
+        orderBy: { departure_time: 'desc' }, 
         take: ITEMS_PER_PAGE, 
         skip: skip 
       }),
-      prisma.reserva.count({ 
+      prisma.reservation.count({ 
         where: {
-          clerk_user_id: userId,
-          OR: [{ horario: { lt: ahora } }, { estado_reserva: { in: ['CANCELED', 'PAID', 'DENIED'] } }]
+          passenger_user_id: userId,
+          OR: [{ departure_time: { lt: ahora } }, { status: { in: ['CANCELED', 'PAID', 'DENIED'] } }]
         } 
       })
     ])
@@ -83,13 +83,13 @@ export default async function MisViajesPage({
     const { userId: actionUserId } = await auth()
     const id = formData.get('reserva_id') as string
 
-    const reserva = await prisma.reserva.findFirst({
-      where: { id: id, clerk_user_id: actionUserId || '' }
+    const reserva = await prisma.reservation.findFirst({
+      where: { id: id, passenger_user_id: actionUserId || '' }
     })
 
     // Verificamos que el viaje no haya expirado
     if (!reserva) return;
-    if (new Date(reserva.horario) < new Date()) {
+    if (new Date(reserva.departure_time) < new Date()) {
       throw new Error("No se puede cancelar un viaje que ya expiró.");
     }
 
@@ -99,9 +99,9 @@ export default async function MisViajesPage({
     }
 
     // Actualizamos el estado en nuestra base de datos
-    await prisma.reserva.updateMany({
-      where: { id: id, clerk_user_id: actionUserId || '' },
-      data: { estado_reserva: 'CANCELED' }
+    await prisma.reservation.updateMany({
+      where: { id: id, passenger_user_id: actionUserId || '' },
+      data: { status: 'CANCELED' }
     })
     revalidatePath('/mis-viajes')
   }
@@ -111,8 +111,8 @@ export default async function MisViajesPage({
     'use server'
     const id = formData.get('reserva_id') as string
 
-    const reservaCheck = await prisma.reserva.findUnique({ where: { id } })
-    if (!reservaCheck || new Date(reservaCheck.horario) < new Date()) {
+    const reservaCheck = await prisma.reservation.findUnique({ where: { id } })
+    if (!reservaCheck || new Date(reservaCheck.departure_time) < new Date()) {
       throw new Error("El viaje ya expiró y no puede ser confirmado.");
     }
 
@@ -130,10 +130,10 @@ export default async function MisViajesPage({
       ocupacion: `${poolStatusData.current_passengers}/${poolStatusData.max_capacity}`
     }
 
-    await prisma.reserva.update({
+    await prisma.reservation.update({
       where: { id },
       data: { 
-        estado_reserva: 'CONFIRMED',
+        status: 'CONFIRMED',
         assigned_driver_snapshot: driverSnapshot
       }
     })
@@ -144,8 +144,8 @@ export default async function MisViajesPage({
     'use server'
     const id = formData.get('reserva_id') as string
     
-    const reservaCheck = await prisma.reserva.findUnique({ where: { id } })
-    if (!reservaCheck || new Date(reservaCheck.horario) < new Date()) {
+    const reservaCheck = await prisma.reservation.findUnique({ where: { id } })
+    if (!reservaCheck || new Date(reservaCheck.departure_time) < new Date()) {
       throw new Error("El viaje ya expiró y no puede ser pagado.");
     }
 
@@ -153,9 +153,9 @@ export default async function MisViajesPage({
     const paymentsData = await fetchPaymentsAppPricingMock()
 
     // Actualizamos la reserva a CONFIRMADA
-    await prisma.reserva.update({
+    await prisma.reservation.update({
       where: { id },
-      data: { estado_reserva: 'PAID', precio_efectivo: paymentsData.estimated_price } 
+      data: { status: 'PAID', effective_price: paymentsData.estimated_price } 
     })
     revalidatePath('/mis-viajes')
   }
@@ -171,8 +171,13 @@ export default async function MisViajesPage({
         // Enviamos feedback (Mock)
         await submitFeedbackMock(id, actionUserId)
 
-        await prisma.notificacion.create({
-          data: { clerk_user_id: actionUserId, tipo: 'REVIEW_SUBMITTED' }
+        await prisma.passengerNotification.create({
+          data: { 
+            passenger_user_id: actionUserId, 
+            reservation_id: id,
+            type: 'REVIEW_SUBMITTED',
+            message: '¡Gracias por tu reseña! ⭐ Hemos enviado el feedback al conductor.'
+          }
         })
       }
     } catch (error) {
@@ -186,8 +191,8 @@ export default async function MisViajesPage({
     'use server'
     const { userId: actionUserId } = await auth()
     if (actionUserId) {
-      await prisma.notificacion.updateMany({
-        where: { clerk_user_id: actionUserId, read_at: null },
+      await prisma.passengerNotification.updateMany({
+        where: { passenger_user_id: actionUserId, read_at: null },
         data: { read_at: new Date() }
       })
       revalidatePath('/mis-viajes')
@@ -231,7 +236,7 @@ export default async function MisViajesPage({
                   ) : (
                     notificaciones.map(notif => (
                       <div key={notif.id} className="p-3 mb-1 bg-[#F7F9FB] text-[#0A192F] text-[12px] rounded-lg border border-[#D8DADC]">
-                        {notif.tipo === 'REVIEW_SUBMITTED' ? '¡Gracias por tu reseña! ⭐ Hemos enviado el feedback al conductor.' : notif.tipo}
+                        {notif.message}
                       </div>
                     ))
                   )}
@@ -268,7 +273,7 @@ export default async function MisViajesPage({
             </header>
 
           {viajesActivos.map((reserva) => {
-            const isPast = new Date(reserva.horario) < ahora;
+            const isPast = new Date(reserva.departure_time) < ahora;
             return (
             <div key={reserva.id} id={`viaje-${reserva.id}`} className="bg-[#FFFFFF] border border-[#D8DADC] rounded-[12px] shadow-sm flex flex-col md:flex-row scroll-mt-24 overflow-hidden">
               
@@ -278,21 +283,21 @@ export default async function MisViajesPage({
                 <div className="flex justify-between items-center mb-6">
                   <p className="text-[12px] font-bold uppercase text-[#475569] flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[16px]">calendar_today</span>
-                    {new Date(reserva.horario).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' })}
+                    {new Date(reserva.departure_time).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' })}
                   </p>
                   <span className={`px-2.5 py-1 rounded-[6px] text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border ${
-                    reserva.estado_reserva === 'PENDING_DRIVER' ? 'bg-[#F59E0B]/10 text-[#D97706] border-[#F59E0B]/20' :
-                    reserva.estado_reserva === 'CONFIRMED' ? 'bg-[#10B981]/10 text-[#059669] border-[#10B981]/20' :
-                    reserva.estado_reserva === 'PAID' ? 'bg-[#3B82F6]/10 text-[#2563EB] border-[#3B82F6]/20' :
+                    reserva.status === 'PENDING_DRIVER' ? 'bg-[#F59E0B]/10 text-[#D97706] border-[#F59E0B]/20' :
+                    reserva.status === 'CONFIRMED' ? 'bg-[#10B981]/10 text-[#059669] border-[#10B981]/20' :
+                    reserva.status === 'PAID' ? 'bg-[#3B82F6]/10 text-[#2563EB] border-[#3B82F6]/20' :
                     'bg-[#EF4444]/10 text-[#DC2626] border-[#EF4444]/20'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${
-                      reserva.estado_reserva === 'PENDING_DRIVER' ? 'bg-[#F59E0B] animate-pulse' : 
-                      reserva.estado_reserva === 'CONFIRMED' ? 'bg-[#10B981]' : 
-                      reserva.estado_reserva === 'PAID' ? 'bg-[#3B82F6]' : 
+                      reserva.status === 'PENDING_DRIVER' ? 'bg-[#F59E0B] animate-pulse' : 
+                      reserva.status === 'CONFIRMED' ? 'bg-[#10B981]' : 
+                      reserva.status === 'PAID' ? 'bg-[#3B82F6]' : 
                       'bg-[#EF4444]'
                     }`}></span>
-                    {reserva.estado_reserva === 'PENDING_DRIVER' ? 'Buscando Unidad' : reserva.estado_reserva === 'CONFIRMED' ? 'Confirmado' : reserva.estado_reserva === 'PAID' ? 'Abonado' : 'Cancelado'}
+                    {reserva.status === 'PENDING_DRIVER' ? 'Buscando Unidad' : reserva.status === 'CONFIRMED' ? 'Confirmado' : reserva.status === 'PAID' ? 'Abonado' : 'Cancelado'}
                   </span>
                 </div>
 
@@ -300,13 +305,13 @@ export default async function MisViajesPage({
                 <div className="relative pl-6 border-l-2 border-dashed border-[#D8DADC] ml-2 mb-8 space-y-8 flex-1">
                   <div className="relative">
                     <span className="absolute -left-[31px] top-1 w-3 h-3 bg-[#FFFFFF] border-[3px] border-[#0A192F] rounded-full"></span>
-                    <p className="text-[14px] text-[#475569] font-medium leading-none mb-1">{new Date(reserva.horario).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs</p>
-                    <h4 className="text-[18px] font-bold text-[#0A192F] leading-tight">{reserva.punto_de_partida}</h4>
+                    <p className="text-[14px] text-[#475569] font-medium leading-none mb-1">{new Date(reserva.departure_time).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs</p>
+                    <h4 className="text-[18px] font-bold text-[#0A192F] leading-tight">{reserva.pickup_address}</h4>
                   </div>
                   <div className="relative">
                     <span className="absolute -left-[31px] top-1 w-3 h-3 bg-[#FFFFFF] border-[3px] border-[#10B981] rounded-full"></span>
                     <p className="text-[14px] text-[#475569] font-medium leading-none mb-1">Destino Estimado</p>
-                    <h4 className="text-[18px] font-bold text-[#0A192F] leading-tight">{reserva.destino.nombre}</h4>
+                    <h4 className="text-[18px] font-bold text-[#0A192F] leading-tight">{reserva.destination.name}</h4>
                   </div>
                 </div>
 
@@ -353,12 +358,12 @@ export default async function MisViajesPage({
 
                 <div className="flex flex-col gap-3">
                   <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-[8px] p-3 text-center mb-2 shadow-sm">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569]">{reserva.estado_reserva === 'CANCELED' ? 'Tarifa Anulada' : 'Tarifa Estimada'}</p>
-                    <p className={`text-[20px] font-bold mt-0.5 ${reserva.estado_reserva === 'CANCELED' ? 'text-[#475569] line-through decoration-[#EF4444] opacity-70' : 'text-[#0A192F]'}`}>${reserva.precio_maximo?.toLocaleString('es-AR') || '0'}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569]">{reserva.status === 'CANCELED' ? 'Tarifa Anulada' : 'Tarifa Estimada'}</p>
+                    <p className={`text-[20px] font-bold mt-0.5 ${reserva.status === 'CANCELED' ? 'text-[#475569] line-through decoration-[#EF4444] opacity-70' : 'text-[#0A192F]'}`}>${reserva.max_price?.toLocaleString('es-AR') || '0'}</p>
                   </div>
 
                   {/* Acciones de Flujo de Negocio */}
-                  {!isPast && reserva.estado_reserva === 'PENDING_DRIVER' && (
+                  {!isPast && reserva.status === 'PENDING_DRIVER' && (
                     <form action={simularConfirmacion}>
                       <input type="hidden" name="reserva_id" value={reserva.id} />
                       <button type="submit" className="w-full py-2.5 rounded-[8px] border-2 border-[#0A192F] text-[#0A192F] text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F] hover:text-white transition-colors">
@@ -367,7 +372,7 @@ export default async function MisViajesPage({
                     </form>
                   )}
                   
-                  {!isPast && reserva.estado_reserva === 'CONFIRMED' && (
+                  {!isPast && reserva.status === 'CONFIRMED' && (
                     <form action={simularPago}>
                       <input type="hidden" name="reserva_id" value={reserva.id} />
                       <button type="submit" className="w-full py-2.5 rounded-[8px] bg-[#0A192F] text-white text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm">
@@ -376,7 +381,7 @@ export default async function MisViajesPage({
                     </form>
                   )}
 
-                  {!isPast && ['PENDING_DRIVER', 'CONFIRMED'].includes(reserva.estado_reserva) && (
+                  {!isPast && ['PENDING_DRIVER', 'CONFIRMED'].includes(reserva.status) && (
                     <form action={cancelarReserva}>
                       <input type="hidden" name="reserva_id" value={reserva.id} />
                       <button type="submit" className="w-full py-2.5 rounded-[8px] bg-[#EF4444]/10 text-[#DC2626] border border-[#EF4444]/20 text-[12px] font-bold uppercase tracking-widest hover:bg-[#EF4444]/20 transition-colors">
@@ -385,7 +390,7 @@ export default async function MisViajesPage({
                     </form>
                   )}
 
-                  {isPast && ['PENDING_DRIVER', 'CONFIRMED'].includes(reserva.estado_reserva) && (
+                  {isPast && ['PENDING_DRIVER', 'CONFIRMED'].includes(reserva.status) && (
                     <div className="bg-[#F7F9FB] border border-[#D8DADC] rounded-[8px] p-3 text-center shadow-sm">
                       <span className="text-[11px] font-bold text-[#EF4444] uppercase tracking-widest">Viaje Expirado</span>
                       <p className="text-[10px] text-[#475569] mt-1 leading-tight">La fecha de partida ya pasó. No se pueden realizar acciones.</p>
@@ -419,15 +424,15 @@ export default async function MisViajesPage({
                 {historial.map((reserva) => (
                   <div key={reserva.id} className="bg-[#FFFFFF] border border-[#D8DADC] rounded-[12px] p-5 shadow-sm hover:border-[#0A192F]/30 transition-colors">
                     <div className="flex justify-between items-start mb-2">
-                      <span className="text-[12px] font-bold text-[#475569]">{new Date(reserva.horario).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}</span>
-                      <span className={`text-[10px] font-bold uppercase tracking-widest ${reserva.estado_reserva === 'PAID' ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-                        {reserva.estado_reserva === 'PAID' ? 'Completado' : 'Cancelado'}
+                      <span className="text-[12px] font-bold text-[#475569]">{new Date(reserva.departure_time).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}</span>
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${reserva.status === 'PAID' ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+                        {reserva.status === 'PAID' ? 'Completado' : 'Cancelado'}
                       </span>
                     </div>
-                    <h4 className="text-[16px] font-bold text-[#0A192F] mb-4 truncate">{reserva.destino.nombre}</h4>
+                    <h4 className="text-[16px] font-bold text-[#0A192F] mb-4 truncate">{reserva.destination.name}</h4>
                     
                     <div className="flex justify-between items-center pt-4 border-t border-[#D8DADC]">
-                      {reserva.estado_reserva === 'PAID' ? (
+                      {reserva.status === 'PAID' ? (
                         <form action={enviarFeedback}>
                           <input type="hidden" name="reserva_id" value={reserva.id} />
                           <button type="submit" className="text-[12px] font-bold text-[#F59E0B] hover:underline flex items-center gap-1">

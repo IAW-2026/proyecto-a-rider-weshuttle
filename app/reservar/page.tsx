@@ -12,12 +12,12 @@ export default async function NuevaReservaPage() {
   if (!userId) redirect('/sign-in')
 
   // 2. Obtenemos datos necesarios para el formulario
-  const destinos = await prisma.destino.findMany()
+  const destinos = await prisma.destination.findMany({ where: { active: true } })
   const user = await currentUser()
   const isAdmin = user?.emailAddresses[0]?.emailAddress === process.env.ADMIN_EMAIL
 
-  const notificaciones = userId ? await prisma.notificacion.findMany({
-    where: { clerk_user_id: userId, read_at: null },
+  const notificaciones = userId ? await prisma.passengerNotification.findMany({
+    where: { passenger_user_id: userId, read_at: null },
     orderBy: { id: 'desc' }
   }) : []
 
@@ -55,26 +55,30 @@ export default async function NuevaReservaPage() {
     }
 
     // Registramos al usuario en nuestra base de datos si es su primera vez
-    await prisma.pasajero.upsert({
+    const pasajeroDb = await prisma.passenger.upsert({
       where: { clerk_user_id: actionUserId },
       update: {},
       create: {
         clerk_user_id: actionUserId,
-        nombre: actionUser?.firstName || 'Pasajero',
+        full_name: actionUser?.firstName || 'Pasajero',
+        phone: "Sin registrar", // Fallback por el contrato
         email: actionUser?.emailAddresses[0]?.emailAddress,
+        status: "ACTIVE",
         rol: 'RIDER'
       }
     })
 
     // Creamos la reserva inmutable con los datos obtenidos
-    await prisma.reserva.create({
+    await prisma.reservation.create({
       data: {
-        clerk_user_id: actionUserId,
-        destino_id: destino_id,
-        horario: fechaViaje,
-        punto_de_partida: punto_partida,
-        estado_reserva: 'PENDING_DRIVER',
-        precio_maximo: paymentsData.max_price,
+        passenger_id: pasajeroDb.id,
+        passenger_user_id: actionUserId,
+        destination_id: destino_id,
+        departure_time: fechaViaje,
+        pickup_address: punto_partida,
+        status: 'PENDING_DRIVER',
+        max_price: paymentsData.max_price,
+        currency: paymentsData.currency || "ARS",
         pool_id: driverData.pool_id
       }
     })
@@ -92,8 +96,8 @@ export default async function NuevaReservaPage() {
     'use server'
     const { userId: actionUserId } = await auth()
     if (actionUserId) {
-      await prisma.notificacion.updateMany({
-        where: { clerk_user_id: actionUserId, read_at: null },
+      await prisma.passengerNotification.updateMany({
+        where: { passenger_user_id: actionUserId, read_at: null },
         data: { read_at: new Date() }
       })
       revalidatePath('/reservar')
@@ -135,7 +139,7 @@ export default async function NuevaReservaPage() {
                   ) : (
                     notificaciones.map(notif => (
                       <div key={notif.id} className="p-3 mb-1 bg-[#F7F9FB] text-[#0A192F] text-[12px] rounded-lg border border-[#D8DADC]">
-                        {notif.tipo === 'REVIEW_SUBMITTED' ? '¡Gracias por tu reseña! ⭐ Hemos enviado el feedback al conductor.' : notif.tipo}
+                        {notif.message}
                       </div>
                     ))
                   )}
@@ -174,7 +178,7 @@ export default async function NuevaReservaPage() {
                 <select name="destino_id" required className="w-full min-w-0 h-[56px] pl-10 pr-8 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] appearance-none cursor-pointer truncate">
                   <option value="">Seleccione su destino...</option>
                   {destinos.map(d => (
-                    <option key={d.id} value={d.id}>{d.nombre}</option>
+                    <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>
                 <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#475569] pointer-events-none">expand_more</span>

@@ -21,4 +21,4 @@ Para evaluar la plataforma con datos precargados, utilizar las siguientes creden
 ## ⚙️ Notas de Arquitectura e Integración
 
 * **Microservicios y APIs Externas:** Al ser parte de un ecosistema distribuido, la comunicación con la *Driver App*, *Payments App* y *Feedback App* se encuentra **mockeada** (`lib/api.ts`). Se simulan las interacciones asíncronas y los Webhooks mediante Server Actions para validar el ciclo de vida de la reserva, quedando pendiente la integración de las URLs productivas definitivas.
-* **Seguridad de APIs Propias:** Los endpoints REST internos expuestos se encuentran funcionales para consumo, quedando programado para una próxima iteración (v2.0) la implementación de Rate Limiting y validación estricta de Tokens/API Keys.
+* **Seguridad de APIs Propias:** Los endpoints REST internos expuestos se encuentran funcionales para consumo, quedando programado para una próxima iteración la implementación de Rate Limiting y validación estricta de Tokens/API Keys.

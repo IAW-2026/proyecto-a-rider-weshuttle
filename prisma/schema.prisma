@@ -6,8 +6,8 @@ datasource db {
   provider = "postgresql"
 }
 
-// Enumerado de estados según tus responsabilidades
-enum EstadoReserva {
+// Enumerado de estados según el contrato
+enum ReservationStatus {
   PENDING_DRIVER
   CONFIRMED
   PAID
@@ -15,41 +15,63 @@ enum EstadoReserva {
   CANCELED
 }
 
-model Pasajero {
-  clerk_user_id String  @id
-  nombre         String?
-  email          String? @unique
-  rol            String  @default("RIDER")
-  company_code   String? 
-  reservas       Reserva[]
-  notificaciones Notificacion[]
+model Passenger {
+  id            String   @id @default(cuid())
+  clerk_user_id String   @unique
+  full_name     String
+  phone         String
+  company_code  String?
+  status        String   @default("ACTIVE") // ACTIVE, INACTIVE, BLOCKED
+  
+  // Campos extra operativos (no estorban al modelo original)
+  email         String?  @unique
+  rol           String   @default("RIDER")
+
+  reservations  Reservation[]
+  notifications PassengerNotification[]
+
+  @@map("passengers")
 }
 
-model Reserva {
-  id                String      @id @default(cuid())
-  clerk_user_id      String
-  pool_id            String?     // ID externo de la Driver App (opcional hasta asignación)
-  estado_reserva    EstadoReserva @default(PENDING_DRIVER)
-  punto_de_partida  String
-  destino_id        String
-  horario            DateTime
-  precio_maximo      Float?      // Precio informado al reservar
-  precio_efectivo    Float?      // Precio final pagado
-  payment_transaction_id   String? // ID de transacción en Payments App
-  assigned_driver_snapshot Json? // Snapshot de los datos del chofer/vehiculo al asignar
+model Destination {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  address     String
+  lat         Float
+  lng         Float
+  active      Boolean  @default(true)
 
-  pasajero          Pasajero    @relation(fields: [clerk_user_id], references: [clerk_user_id])
-  destino           Destino     @relation(fields: [destino_id], references: [id])
+  reservations Reservation[]
+
+  @@map("destinations")
 }
 
-model Destino {
-  id                String      @id @default(cuid())
-  nombre            String
-  ubicacion_lat_long String
-  reservas          Reserva[]
+model Reservation {
+  id                       String   @id @default(cuid())
+  passenger_id             String
+  passenger_user_id        String
+  pool_id                  String?
+  destination_id           String
+  departure_time           DateTime
+  pickup_address           String
+  pickup_lat               Float?
+  pickup_lng               Float?
+  status                   ReservationStatus @default(PENDING_DRIVER)
+  max_price                Float?
+  effective_price          Float?
+  currency                 String   @default("ARS")
+  payment_transaction_id   String?
+  payment_rejection_reason String?
+  assigned_driver_snapshot Json?
+
+  passenger   Passenger   @relation(fields: [passenger_id], references: [id])
+  destination Destination @relation(fields: [destination_id], references: [id])
+
+  @@map("reservations")
 }
 
-// Tabla temporal usada EXCLUSIVAMENTE para el simulador visual de la Home
+// Tabla temporal usada EXCLUSIVAMENTE para el simulador visual de Combis en la Home (fuera del contrato)
 model Pool {
   id               String   @id @default(cuid())
   conductor_nombre String
@@ -58,11 +80,17 @@ model Pool {
   fecha_viaje      DateTime @default(now())
 }
 
-model Notificacion {
-  id            String    @id @default(cuid())
-  clerk_user_id String
-  tipo          String    // ej: TRIP_STARTED, DRIVER_ARRIVED, PAYMENT_DENIED
-  read_at       DateTime? // Si es null significa que no fue leída
+model PassengerNotification {
+  id                String    @id @default(cuid())
+  passenger_user_id String
+  reservation_id    String?
+  pool_id           String?
+  type              String    // ej: POOL_CANCELED, PAYMENT_DENIED
+  message           String
+  read_at           DateTime?
+  created_at        DateTime  @default(now())
 
-  pasajero      Pasajero  @relation(fields: [clerk_user_id], references: [clerk_user_id])
+  passenger Passenger @relation(fields: [passenger_user_id], references: [clerk_user_id])
+
+  @@map("passenger_notifications")
 }
