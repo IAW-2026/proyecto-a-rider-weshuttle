@@ -16,8 +16,8 @@ export async function POST(
     }
 
     // Buscamos todas las reservas activas asociadas a esta combi
-    const reservas = await prisma.reserva.findMany({
-      where: { pool_id: pool_id, estado_reserva: { in: ['PENDING_DRIVER', 'CONFIRMED'] } }
+    const reservas = await prisma.reservation.findMany({
+      where: { pool_id: pool_id, status: { in: ['PENDING_DRIVER', 'CONFIRMED'] } }
     });
 
     if (reservas.length === 0) {
@@ -25,18 +25,19 @@ export async function POST(
     }
 
     // Pasamos todas esas reservas a estado CANCELED en bloque
-    const actualizadas = await prisma.reserva.updateMany({
-      where: { pool_id: pool_id, estado_reserva: { in: ['PENDING_DRIVER', 'CONFIRMED'] } },
-      data: { estado_reserva: 'CANCELED' }
+    const actualizadas = await prisma.reservation.updateMany({
+      where: { pool_id: pool_id, status: { in: ['PENDING_DRIVER', 'CONFIRMED'] } },
+      data: { status: 'CANCELED' }
     });
 
     // Notificamos a los pasajeros afectados (Extraemos los IDs de usuario sin repetir)
-    const usuariosUnicos = [...new Set(reservas.map(r => r.clerk_user_id))];
+    const usuariosUnicos = [...new Set(reservas.map(r => r.passenger_user_id))];
     const notificaciones = usuariosUnicos.map(userId => ({
-      clerk_user_id: userId,
-      tipo: `POOL_CANCELED: ${body.message || 'Tu viaje fue cancelado por la logística.'}`
+      passenger_user_id: userId,
+      type: 'POOL_CANCELED',
+      message: body.message || 'Tu viaje fue cancelado por la logística.'
     }));
-    await prisma.notificacion.createMany({ data: notificaciones });
+    await prisma.passengerNotification.createMany({ data: notificaciones });
 
     return NextResponse.json({
       pool_id: pool_id,

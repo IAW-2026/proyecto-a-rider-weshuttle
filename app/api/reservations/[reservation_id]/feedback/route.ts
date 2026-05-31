@@ -18,7 +18,7 @@ export async function POST(
     }
 
     // 2. Buscamos la reserva para asegurarnos de que existe
-    const reserva = await prisma.reserva.findUnique({
+    const reserva = await prisma.reservation.findUnique({
       where: { id: reservation_id }
     });
 
@@ -27,10 +27,11 @@ export async function POST(
     }
 
     // 3. Registramos el feedback (usamos la tabla de notificaciones como registro seguro)
-    await prisma.notificacion.create({
+    await prisma.passengerNotification.create({
       data: {
-        clerk_user_id: reserva.clerk_user_id,
-        tipo: `FEEDBACK_SENT: Calificaste tu viaje con ${body.rating} estrellas.`
+        passenger_user_id: reserva.passenger_user_id,
+        type: 'FEEDBACK_SENT',
+        message: `Calificaste tu viaje con ${body.rating} estrellas.`
       }
     });
 
