@@ -16,7 +16,9 @@ export default async function MisViajesPage({
   const { userId } = await auth()
   const user = await currentUser()
   if (!userId) redirect('/sign-in')
-  const isAdmin = user?.emailAddresses[0]?.emailAddress === process.env.ADMIN_EMAIL
+  const userEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase() ?? '';
+  const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map(e => e.trim().toLowerCase());
+  const isAdmin = adminEmailsList.includes(userEmail);
 
   const notificaciones = await prisma.passengerNotification.findMany({
     where: { passenger_user_id: userId, read_at: null },

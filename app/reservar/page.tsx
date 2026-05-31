@@ -14,7 +14,9 @@ export default async function NuevaReservaPage() {
   // 2. Obtenemos datos necesarios para el formulario
   const destinos = await prisma.destination.findMany({ where: { active: true } })
   const user = await currentUser()
-  const isAdmin = user?.emailAddresses[0]?.emailAddress === process.env.ADMIN_EMAIL
+  const userEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase() ?? '';
+  const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map(e => e.trim().toLowerCase());
+  const isAdmin = adminEmailsList.includes(userEmail);
 
   const notificaciones = userId ? await prisma.passengerNotification.findMany({
     where: { passenger_user_id: userId, read_at: null },
