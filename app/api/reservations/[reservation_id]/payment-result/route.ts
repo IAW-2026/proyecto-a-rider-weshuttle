@@ -37,10 +37,16 @@ export async function PATCH(
       return NextResponse.json({ error: "BAD_REQUEST", message: "payment_status inválido." }, { status: 400 });
     }
 
+    const updateData: any = { status: newStatus };
+    if (body.payment_status === 'PAID') {
+      updateData.effective_price = body.effective_price;
+      updateData.payment_transaction_id = body.transaction_id;
+    }
+
     // Actualizamos la reserva en la base de datos
     await prisma.reservation.update({
       where: { id: reservation_id },
-      data: { status: newStatus as any }
+      data: updateData
     });
 
     // Le enviamos una notificación al pasajero
@@ -54,7 +60,8 @@ export async function PATCH(
 
     return NextResponse.json({
       reservation_id: reservation_id,
-      reservation_status: newStatus
+      reservation_status: newStatus,
+      effective_price: body.payment_status === 'PAID' ? body.effective_price : null
     });
   } catch (error) {
     return NextResponse.json({ error: "INTERNAL_SERVER_ERROR", message: "Error interno al procesar el pago." }, { status: 500 });
