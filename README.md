@@ -1,4 +1,4 @@
-# 🛸 WeShuttle - Rider App
+#  WeShuttle - Rider App
 
 ## 1. Link al deploy de producción
 **🔗 https://proyecto-a-rider-weshuttle.vercel.app**
@@ -20,8 +20,8 @@
 2. Haga clic en el botón **"Ingresar"** en la barra superior.
 3. Inicie sesión (autenticación vía Clerk) utilizando alguna de las credenciales provistas en la tabla anterior.
 4. Dependiendo de la cuenta con la que ingrese, la experiencia y los permisos serán distintos:
-   * 🎒 **Como Pasajero:** Podrá visualizar la flota pública en tiempo real, crear nuevas reservas de viaje y gestionar su historial personal en la pestaña "Mis Viajes".
-   * 🛡️ **Como Administrador:** Tendrá acceso a todo lo anterior, más un botón exclusivo en la barra superior llamado **"Panel Admin"**. Desde allí podrá acceder al CRUD logístico para gestionar el catálogo de Destinos y simular el estado de la flota.
+   * **Como Pasajero:** Podrá visualizar la flota pública en tiempo real, crear nuevas reservas de viaje y gestionar su historial personal en la pestaña "Mis Viajes".
+   * **Como Administrador:** Tendrá acceso a todo lo anterior, más un botón exclusivo en la barra superior llamado **"Panel Admin"**. Desde allí podrá acceder al CRUD logístico para gestionar el catálogo de Destinos y simular el estado de la flota.
 
 ---
 
