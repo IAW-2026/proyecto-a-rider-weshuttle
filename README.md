@@ -9,8 +9,8 @@
 
 | Perfil | Email | Contraseña | Vistas Accesibles |
 | :--- | :--- | :--- | :--- |
-| **Administrador** | admin+clerktest@iaw.com | iawuser# | Vista Pública, Mis Viajes, Panel Logístico (Admin) |
-| **Pasajero** | rider+clerktest@iaw.com | iawuser# | Vista Pública, Mis Viajes |
+| **Administrador** | admin+clerk_test@iaw.com | iawuser# | Vista Pública, Mis Viajes, Panel Logístico (Admin) |
+| **Pasajero** | rider+clerk_test@iaw.com | iawuser# | Vista Pública, Mis Viajes |
 
 ---
 
