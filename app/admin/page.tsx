@@ -261,12 +261,12 @@ export default async function GestionViajes({
                   <h2 className="text-[32px] font-bold text-[#0A192F] tracking-tight">Monitoreo de Flota</h2>
                   <div className="relative group cursor-help flex items-center mt-2" tabIndex={0}>
                     <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#D8DADC] text-[#0A192F] text-[11px] font-bold hover:bg-[#D8DADC]/80 transition-colors">?</span>
-                    <div className="fixed left-4 right-4 top-1/2 -translate-y-1/2 sm:absolute sm:top-full sm:left-1/2 sm:-translate-x-1/2 sm:translate-y-0 sm:mt-2 hidden group-hover:block group-focus-within:block w-auto sm:w-72 p-4 bg-[#0A192F] text-[#D8DADC] text-[12px] font-normal rounded-lg shadow-2xl z-[100] leading-relaxed">
+                    <div className="absolute top-full left-0 sm:left-1/2 sm:-translate-x-1/2 mt-2 hidden group-hover:block group-focus-within:block w-64 sm:w-72 p-4 bg-[#0A192F] text-[#D8DADC] text-[12px] font-normal rounded-lg shadow-2xl z-[100] leading-relaxed">
                       <p className="mb-2"><strong className="text-white tracking-wide">TOTAL:</strong> Suma absoluta de todos los viajes en el sistema.</p>
                       <p className="mb-2"><strong className="text-white tracking-wide">EN RUTA:</strong> Unidades despachadas ("En camino").</p>
                       <p className="mb-2"><strong className="text-white tracking-wide">PENDIENTES:</strong> Viajes programados esperando salida.</p>
                       <p><strong className="text-white tracking-wide">CANCELADOS:</strong> Viajes anulados por el usuario o el sistema.</p>
-                      <div className="hidden sm:block absolute left-1/2 -translate-x-1/2 bottom-full border-4 border-transparent border-b-[#0A192F]"></div>
+                      <div className="hidden sm:block absolute sm:left-1/2 -translate-x-1/2 bottom-full border-4 border-transparent border-b-[#0A192F]"></div>
                     </div>
                   </div>
                 </div>

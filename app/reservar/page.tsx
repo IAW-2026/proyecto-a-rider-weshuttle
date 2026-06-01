@@ -123,12 +123,12 @@ export default async function NuevaReservaPage() {
           <div className="relative group flex items-center h-full" tabIndex={0}>
             <div className="cursor-pointer text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 relative flex items-center justify-center p-2 rounded-full hover:bg-[#F7F9FB]">
               <span className="material-symbols-outlined text-[24px]">notifications</span>
-              {notificaciones.length > 0 && <span className="absolute top-1 right-1 bg-[#EF4444] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
+              {notificaciones.length > 0 && <span className="absolute top-1 right-1 bg-[#DC2626] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
             </div>
             <div className="fixed left-4 right-4 top-[72px] sm:absolute sm:top-[100%] sm:left-auto sm:right-0 sm:w-72 z-50 hidden group-hover:block group-focus-within:block sm:pt-1">
               <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-[#D8DADC] flex justify-between items-center bg-[#F7F9FB]">
-                  <h3 className="text-[16px] font-semibold text-[#0A192F]">Notificaciones</h3>
+                  <h2 className="text-[16px] font-semibold text-[#0A192F]">Notificaciones</h2>
                   {notificaciones.length > 0 && (
                     <form action={limpiarNotificaciones}>
                       <button type="submit" className="text-[12px] text-[#0A192F] font-bold uppercase tracking-widest hover:underline">Marcar leídas</button>
@@ -174,10 +174,10 @@ export default async function NuevaReservaPage() {
           <form action={confirmarReserva} className="flex flex-col gap-6">
             
             <div>
-              <label className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Destino Final</label>
+              <label htmlFor="destino_id" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Destino Final</label>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">map</span>
-                <select name="destino_id" required className="w-full min-w-0 h-[56px] pl-10 pr-8 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] appearance-none cursor-pointer truncate">
+                <select id="destino_id" name="destino_id" required className="w-full min-w-0 h-[56px] pl-10 pr-8 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] appearance-none cursor-pointer truncate">
                   <option value="">Seleccione su destino...</option>
                   {destinos.map(d => (
                     <option key={d.id} value={d.id}>{d.name}</option>
@@ -189,19 +189,19 @@ export default async function NuevaReservaPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2 w-full overflow-hidden">
-                <label className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Fecha y Horario de Partida</label>
+                <label htmlFor="horario" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Fecha y Horario de Partida</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">calendar_clock</span>
-                  <input type="datetime-local" name="horario" min={minDateTime} defaultValue={minDateTime} required className="w-full appearance-none min-w-0 max-w-full h-[56px] pl-10 pr-2 md:pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
+                  <input type="datetime-local" id="horario" name="horario" min={minDateTime} defaultValue={minDateTime} required className="w-full appearance-none min-w-0 max-w-full h-[56px] pl-10 pr-2 md:pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
                 </div>
               </div>
             </div>
             
             <div>
-              <label className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Punto de Recogida</label>
+              <label htmlFor="punto_partida" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Punto de Recogida</label>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">location_on</span>
-                <input type="text" name="punto_partida" placeholder="Ej: Sarmiento 850" required minLength={5} maxLength={100} pattern=".*[a-zA-ZáéíóúÁÉÍÓÚñÑ].*" title="Debe incluir al menos una letra (Ej: Calle 123)" className="w-full min-w-0 h-[56px] pl-10 pr-2 md:pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
+                <input type="text" id="punto_partida" name="punto_partida" placeholder="Ej: Sarmiento 850" required minLength={5} maxLength={100} pattern=".*[a-zA-ZáéíóúÁÉÍÓÚñÑ].*" title="Debe incluir al menos una letra (Ej: Calle 123)" className="w-full min-w-0 h-[56px] pl-10 pr-2 md:pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
               </div>
               <p className="text-[12px] text-[#475569] mt-2">Ej: Entrada principal Edificio Titanium</p>
             </div>
