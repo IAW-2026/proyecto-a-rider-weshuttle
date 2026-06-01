@@ -86,7 +86,7 @@ export default async function VistaPublicaViajes() {
               <div className="relative group flex items-center h-full" tabIndex={0}>
                 <div className="cursor-pointer text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 relative flex items-center justify-center p-2 rounded-full hover:bg-[#F7F9FB]">
                   <span className="material-symbols-outlined text-[24px]">notifications</span>
-                  {notificaciones.length > 0 && <span className="absolute top-1 right-1 bg-[#EF4444] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
+              {notificaciones.length > 0 && <span className="absolute top-1 right-1 bg-[#DC2626] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
                 </div>
                 {/* Menú desplegable con puente invisible */}
                 <div className="fixed left-4 right-4 top-[72px] sm:absolute sm:top-[100%] sm:left-auto sm:right-0 sm:w-72 z-50 hidden group-hover:block group-focus-within:block sm:pt-1">
@@ -224,9 +224,9 @@ export default async function VistaPublicaViajes() {
               <div key={viaje.id} className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg p-5 shadow-sm flex flex-col justify-between hover:border-[#0A192F]/40 transition-colors group">
                 <div className="flex justify-between items-start mb-5">
                   <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${
-                    viaje.estado === 'En camino' ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20' : 
+                  viaje.estado === 'En camino' ? 'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20' : 
                     viaje.estado === 'Programado' ? 'bg-[#0A192F]/5 text-[#0A192F] border-[#0A192F]/10' : 
-                    viaje.estado === 'Cancelado' ? 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20' :
+                  viaje.estado === 'Cancelado' ? 'bg-[#EF4444]/10 text-[#DC2626] border-[#EF4444]/20' :
                     'bg-[#F7F9FB] text-[#475569] border-[#D8DADC]'
                   }`}>
                     {viaje.estado}
@@ -238,7 +238,7 @@ export default async function VistaPublicaViajes() {
                     {iniciales}
                   </div>
                   <div className="overflow-hidden">
-                    <h4 className="text-[16px] font-bold text-[#0A192F] truncate">{viaje.conductor_nombre}</h4>
+                    <h3 className="text-[16px] font-bold text-[#0A192F] truncate">{viaje.conductor_nombre}</h3>
                     <p className="text-[12px] text-[#475569] flex items-center gap-1 mt-0.5 truncate">
                       <span className="material-symbols-outlined text-[14px]">schedule</span> 
                       {viaje.fecha_viaje ? new Date(viaje.fecha_viaje).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' hs' : 'Pronto'}

@@ -371,9 +371,9 @@ export default async function GestionViajes({
                                 name="estado" 
                                 defaultValue={viaje.estado} 
                                 className={`p-1.5 rounded-[6px] border text-[11px] font-bold uppercase tracking-widest outline-none cursor-pointer ${
-                                  viaje.estado === 'En camino' ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20' : 
+                              viaje.estado === 'En camino' ? 'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20' : 
                                   viaje.estado === 'Programado' ? 'bg-[#0A192F]/5 text-[#0A192F] border-[#0A192F]/10' : 
-                                  viaje.estado === 'Cancelado' ? 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20' :
+                              viaje.estado === 'Cancelado' ? 'bg-[#EF4444]/10 text-[#DC2626] border-[#EF4444]/20' :
                                   'bg-[#F7F9FB] text-[#475569] border-[#D8DADC]'
                                 }`}
                               >

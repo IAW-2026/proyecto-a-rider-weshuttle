@@ -1,5 +1,11 @@
 import './globals.css' 
 import { ClerkProvider } from '@clerk/nextjs'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'WeShuttle | Movilidad Corporativa',
+  description: 'Plataforma B2B para la gestión de traslados y monitoreo de flota en tiempo real.',
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

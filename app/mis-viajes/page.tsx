@@ -219,7 +219,7 @@ export default async function MisViajesPage({
           <div className="relative group flex items-center h-full" tabIndex={0}>
             <div className="cursor-pointer text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 relative flex items-center justify-center p-2 rounded-full hover:bg-[#F7F9FB]">
               <span className="material-symbols-outlined text-[24px]">notifications</span>
-              {notificaciones.length > 0 && <span className="absolute top-1 right-1 bg-[#EF4444] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
+              {notificaciones.length > 0 && <span className="absolute top-1 right-1 bg-[#DC2626] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
             </div>
             {/* Menú desplegable con puente invisible */}
             <div className="fixed left-4 right-4 top-[72px] sm:absolute sm:top-[100%] sm:left-auto sm:right-0 sm:w-72 z-50 hidden group-hover:block group-focus-within:block sm:pt-1">
@@ -288,10 +288,10 @@ export default async function MisViajesPage({
                     {new Date(reserva.departure_time).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' })}
                   </p>
                   <span className={`px-2.5 py-1 rounded-[6px] text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border ${
-                    reserva.status === 'PENDING_DRIVER' ? 'bg-[#F59E0B]/10 text-[#D97706] border-[#F59E0B]/20' :
-                    reserva.status === 'CONFIRMED' ? 'bg-[#10B981]/10 text-[#059669] border-[#10B981]/20' :
-                    reserva.status === 'PAID' ? 'bg-[#3B82F6]/10 text-[#2563EB] border-[#3B82F6]/20' :
-                    'bg-[#EF4444]/10 text-[#DC2626] border-[#EF4444]/20'
+                    reserva.status === 'PENDING_DRIVER' ? 'bg-[#F59E0B]/10 text-[#B45309] border-[#F59E0B]/20' :
+                    reserva.status === 'CONFIRMED' ? 'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20' :
+                    reserva.status === 'PAID' ? 'bg-[#3B82F6]/10 text-[#1D4ED8] border-[#3B82F6]/20' :
+                    'bg-[#EF4444]/10 text-[#B91C1C] border-[#EF4444]/20'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${
                       reserva.status === 'PENDING_DRIVER' ? 'bg-[#F59E0B] animate-pulse' : 
@@ -308,12 +308,12 @@ export default async function MisViajesPage({
                   <div className="relative">
                     <span className="absolute -left-[31px] top-1 w-3 h-3 bg-[#FFFFFF] border-[3px] border-[#0A192F] rounded-full"></span>
                     <p className="text-[14px] text-[#475569] font-medium leading-none mb-1">{new Date(reserva.departure_time).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs</p>
-                    <h4 className="text-[18px] font-bold text-[#0A192F] leading-tight">{reserva.pickup_address}</h4>
+                    <h3 className="text-[18px] font-bold text-[#0A192F] leading-tight">{reserva.pickup_address}</h3>
                   </div>
                   <div className="relative">
                     <span className="absolute -left-[31px] top-1 w-3 h-3 bg-[#FFFFFF] border-[3px] border-[#10B981] rounded-full"></span>
                     <p className="text-[14px] text-[#475569] font-medium leading-none mb-1">Destino Estimado</p>
-                    <h4 className="text-[18px] font-bold text-[#0A192F] leading-tight">{reserva.destination.name}</h4>
+                    <h3 className="text-[18px] font-bold text-[#0A192F] leading-tight">{reserva.destination.name}</h3>
                   </div>
                 </div>
 
@@ -347,7 +347,7 @@ export default async function MisViajesPage({
                         {(reserva.assigned_driver_snapshot as any).nombre.split(' ').map((n: string) => n[0]).join('').substring(0,2)}
                       </div>
                       <div>
-                        <h4 className="text-[14px] font-bold text-[#0A192F]">{(reserva.assigned_driver_snapshot as any).nombre}</h4>
+                    <h3 className="text-[14px] font-bold text-[#0A192F]">{(reserva.assigned_driver_snapshot as any).nombre}</h3>
                         <p className="text-[12px] font-bold text-[#F59E0B] flex items-center gap-0.5 mt-0.5">
                           <span className="material-symbols-outlined text-[14px] fill-current">star</span> {(reserva.assigned_driver_snapshot as any).rating || '4.0'}
                         </p>
@@ -431,7 +431,7 @@ export default async function MisViajesPage({
                         {reserva.status === 'PAID' ? 'Completado' : 'Cancelado'}
                       </span>
                     </div>
-                    <h4 className="text-[16px] font-bold text-[#0A192F] mb-4 truncate">{reserva.destination.name}</h4>
+                    <h3 className="text-[16px] font-bold text-[#0A192F] mb-4 truncate">{reserva.destination.name}</h3>
                     
                     <div className="flex justify-between items-center pt-4 border-t border-[#D8DADC]">
                       {reserva.status === 'PAID' ? (
