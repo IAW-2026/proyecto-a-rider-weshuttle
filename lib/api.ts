@@ -30,7 +30,7 @@ export async function getDriverAppAssignedDriverMock(pool_id: string) {
     "pool_status": "ASSIGNED",
     "driver": {
       "driver_user_id": "user_driver_01",
-      "full_name": "Juliana Pagani" // Dato del contrato oficial
+      "full_name": "Juliana Pagani" 
     },
     "vehicle": {
       "vehicle_id": "veh_123",
