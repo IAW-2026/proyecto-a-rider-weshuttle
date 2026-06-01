@@ -118,7 +118,7 @@ export default async function GestionViajes({
 
   const viajes = tab !== 'destinos' ? await prisma.pool.findMany({
     where: { estado: { contains: query, mode: 'insensitive' } },
-    orderBy: { fecha_viaje: 'desc' }
+    orderBy: { id: 'desc' }
   }) : [];
 
   let statTotal = 0, statEnRuta = 0, statPendientes = 0, statCancelados = 0;
@@ -367,6 +367,7 @@ export default async function GestionViajes({
                             <form action={actualizarEstado} className="flex items-center gap-2">
                               <input type="hidden" name="id" value={viaje.id} />
                               <select 
+                                key={viaje.estado}
                                 name="estado" 
                                 defaultValue={viaje.estado} 
                                 className={`p-1.5 rounded-[6px] border text-[11px] font-bold uppercase tracking-widest outline-none cursor-pointer ${

@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export default async function VistaPublicaViajes() {
   // Obtenemos los viajes activos para el monitor de flota público
   const viajes = await prisma.pool.findMany({
-    where: { estado: { not: 'Cancelado' } },
+    where: { estado: { in: ['Programado', 'En camino'] } },
     orderBy: { id: 'desc' }
   })
 
