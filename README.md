@@ -19,7 +19,9 @@
 1. Ingrese al enlace de producción en Vercel.
 2. Haga clic en el botón **"Ingresar"** en la barra superior.
 3. Inicie sesión (autenticación vía Clerk) utilizando alguna de las credenciales provistas en la tabla anterior.
-4. El usuario **Pasajero** podrá visualizar la flota pública, crear reservas y gestionar su historial. El usuario **Administrador** tendrá un acceso adicional al *Panel Admin* para gestionar el catálogo de Destinos y simular el movimiento de la flota.
+4. Dependiendo de la cuenta con la que ingrese, la experiencia y los permisos serán distintos:
+   * 🎒 **Como Pasajero:** Podrá visualizar la flota pública en tiempo real, crear nuevas reservas de viaje y gestionar su historial personal en la pestaña "Mis Viajes".
+   * 🛡️ **Como Administrador:** Tendrá acceso a todo lo anterior, más un botón exclusivo en la barra superior llamado **"Panel Admin"**. Desde allí podrá acceder al CRUD logístico para gestionar el catálogo de Destinos y simular el estado de la flota.
 
 ---
 
