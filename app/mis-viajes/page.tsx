@@ -47,7 +47,10 @@ export default async function MisViajesPage({
           departure_time: { gte: ahora } 
         },
     include: { destination: true },
-    orderBy: { departure_time: 'asc' }
+    orderBy: [
+      { departure_time: 'asc' },
+      { id: 'asc' }
+    ]
   })
   
   let historial: any[] = [];
