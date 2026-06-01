@@ -17,7 +17,7 @@
 ## 3. 📋 Instrucciones para utilizar la aplicación
 
 1. Ingrese al enlace de producción en Vercel.
-2. Haga clic en el botón **"Ingreso Personal"** en la barra superior.
+2. Haga clic en el botón **"Ingresar"** en la barra superior.
 3. Inicie sesión (autenticación vía Clerk) utilizando alguna de las credenciales provistas en la tabla anterior.
 4. El usuario **Pasajero** podrá visualizar la flota pública, crear reservas y gestionar su historial. El usuario **Administrador** tendrá un acceso adicional al *Panel Admin* para gestionar el catálogo de Destinos y simular el movimiento de la flota.
 

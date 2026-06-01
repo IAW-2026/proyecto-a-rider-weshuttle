@@ -127,7 +127,7 @@ export default async function VistaPublicaViajes() {
             </>
           ) : (
             <Link href="/sign-in" className="bg-[#0A192F] text-white px-5 py-2 rounded-lg text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm">
-              Ingreso Personal
+              Ingresar
             </Link>
           )}
         </div>
