@@ -6,7 +6,7 @@ datasource db {
   provider = "postgresql"
 }
 
-// Enumerado de estados según el contrato
+// Enumerado de estados 
 enum ReservationStatus {
   PENDING_DRIVER
   CONFIRMED
