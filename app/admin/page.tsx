@@ -266,7 +266,7 @@ export default async function GestionViajes({
                       <p className="mb-2"><strong className="text-white tracking-wide">EN RUTA:</strong> Unidades despachadas ("En camino").</p>
                       <p className="mb-2"><strong className="text-white tracking-wide">PENDIENTES:</strong> Viajes programados esperando salida.</p>
                       <p><strong className="text-white tracking-wide">CANCELADOS:</strong> Viajes anulados por el usuario o el sistema.</p>
-                      <div className="absolute left-4 sm:left-1/2 -translate-x-1/2 bottom-full border-4 border-transparent border-b-[#0A192F]"></div>
+                      <div className="hidden sm:block absolute sm:left-1/2 -translate-x-1/2 bottom-full border-4 border-transparent border-b-[#0A192F]"></div>
                     </div>
                   </div>
                 </div>
