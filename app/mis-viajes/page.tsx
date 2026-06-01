@@ -62,7 +62,7 @@ export default async function MisViajesPage({
           OR: [{ departure_time: { lt: ahora } }, { status: { in: ['CANCELED', 'PAID', 'DENIED'] } }]
         }, 
         include: { destination: true }, 
-        orderBy: { departure_time: 'desc' }, 
+        orderBy: { id: 'desc' }, 
         take: ITEMS_PER_PAGE, 
         skip: skip 
       }),
