@@ -1,0 +1,497 @@
+import { auth, currentUser } from '@clerk/nextjs/server'
+import { redirect } from 'next/navigation'
+import { prisma } from '@/lib/prisma'
+import { revalidatePath } from 'next/cache'
+import Link from 'next/link'
+import { submitFeedbackMock, getDriverAppAssignedDriverMock, fetchPaymentsAppPricingMock, cancelReservationMock, getFeedbackAppRatingMock, getDriverAppPoolStatusMock } from '@/lib/api'
+import { UserButton } from "@clerk/nextjs"
+
+export const dynamic = 'force-dynamic'
+
+export default async function MisViajesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const { userId } = await auth()
+  const user = await currentUser()
+  if (!userId) redirect('/sign-in')
+  const userEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase() ?? '';
+  const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map(e => e.trim().toLowerCase());
+  const isAdmin = adminEmailsList.includes(userEmail);
+
+  const notificaciones = await prisma.passengerNotification.findMany({
+    where: { passenger_user_id: userId, read_at: null },
+    orderBy: { id: 'desc' }
+  })
+
+  const ahora = new Date()
+  const ITEMS_PER_PAGE = 5
+  
+  // Configuración de la paginación
+  const params = await searchParams;
+  const pageParam = params?.page;
+  const currentPage = Number(Array.isArray(pageParam) ? pageParam[0] : pageParam) || 1
+  const skip = (currentPage - 1) * ITEMS_PER_PAGE
+  
+  const viajeIdParam = typeof params?.viaje_id === 'string' ? params.viaje_id : undefined;
+  const fromParam = typeof params?.from === 'string' ? params.from : undefined;
+
+  // Obtenemos los viajes activos del usuario (o el viaje específico del detalle)
+  const viajesActivos = await prisma.reservation.findMany({
+    where: viajeIdParam 
+      ? { passenger_user_id: userId, id: viajeIdParam } 
+      : { 
+          passenger_user_id: userId, 
+          status: { in: ['PENDING_DRIVER', 'CONFIRMED'] },
+          departure_time: { gte: ahora } 
+        },
+    include: { destination: true },
+    orderBy: [
+      { departure_time: 'asc' },
+      { id: 'asc' }
+    ]
+  })
+  
+  let historial: any[] = [];
+  let totalHistorial = 0;
+
+  // Si NO estamos en detalle, cargamos el historial paginado
+  if (!viajeIdParam) {
+    const [h, t] = await Promise.all([
+      prisma.reservation.findMany({ 
+        where: {
+          passenger_user_id: userId,
+          OR: [{ departure_time: { lt: ahora } }, { status: { in: ['CANCELED', 'PAID', 'DENIED'] } }]
+        }, 
+        include: { destination: true }, 
+        orderBy: { id: 'desc' }, 
+        take: ITEMS_PER_PAGE, 
+        skip: skip 
+      }),
+      prisma.reservation.count({ 
+        where: {
+          passenger_user_id: userId,
+          OR: [{ departure_time: { lt: ahora } }, { status: { in: ['CANCELED', 'PAID', 'DENIED'] } }]
+        } 
+      })
+    ])
+    historial = h;
+    totalHistorial = t;
+  }
+
+  const totalPages = Math.ceil(totalHistorial / ITEMS_PER_PAGE)
+
+  // --- SERVER ACTION: Cancelar Reserva ---
+  async function cancelarReserva(formData: FormData) {
+    'use server'
+    const { userId: actionUserId } = await auth()
+    const id = formData.get('reserva_id') as string
+
+    const reserva = await prisma.reservation.findFirst({
+      where: { id: id, passenger_user_id: actionUserId || '' }
+    })
+
+    // Verificamos que el viaje no haya expirado
+    if (!reserva) return;
+    if (new Date(reserva.departure_time) < new Date()) {
+      throw new Error("No se puede cancelar un viaje que ya expiró.");
+    }
+
+    // Avisamos a la Driver App que liberamos el asiento
+    if (reserva?.pool_id) {
+      await cancelReservationMock(reserva.pool_id, id)
+    }
+
+    // Actualizamos el estado en nuestra base de datos
+    await prisma.reservation.updateMany({
+      where: { id: id, passenger_user_id: actionUserId || '' },
+      data: { status: 'CANCELED' }
+    })
+    revalidatePath('/mis-viajes')
+  }
+
+  // --- SERVER ACTIONS SIMULADAS (Dev Mode / Mocks) ---
+  async function simularConfirmacion(formData: FormData) {
+    'use server'
+    const id = formData.get('reserva_id') as string
+
+    const reservaCheck = await prisma.reservation.findUnique({ where: { id } })
+    if (!reservaCheck || new Date(reservaCheck.departure_time) < new Date()) {
+      throw new Error("El viaje ya expiró y no puede ser confirmado.");
+    }
+
+    // Obtenemos los datos simulados de los otros microservicios
+    const driverData = await getDriverAppAssignedDriverMock("pool_abc123");
+    const ratingData = await getFeedbackAppRatingMock(driverData.driver.driver_user_id);
+    const poolStatusData = await getDriverAppPoolStatusMock("pool_abc123");
+    
+    // Creamos el "snapshot" (foto inmutable) de la asignación
+    const driverSnapshot = {
+      nombre: driverData.driver.full_name,
+      patente: driverData.vehicle.license_plate,
+      vehiculo: `${driverData.vehicle.brand} ${driverData.vehicle.model}`,
+      rating: ratingData.average_rating,
+      ocupacion: `${poolStatusData.current_passengers}/${poolStatusData.max_capacity}`
+    }
+
+    await prisma.reservation.update({
+      where: { id },
+      data: { 
+        status: 'CONFIRMED',
+        assigned_driver_snapshot: driverSnapshot
+      }
+    })
+    revalidatePath('/mis-viajes')
+  }
+
+  async function simularPago(formData: FormData) {
+    'use server'
+    const id = formData.get('reserva_id') as string
+    
+    const reservaCheck = await prisma.reservation.findUnique({ where: { id } })
+    if (!reservaCheck || new Date(reservaCheck.departure_time) < new Date()) {
+      throw new Error("El viaje ya expiró y no puede ser pagado.");
+    }
+
+    // Obtenemos el precio estimado real simulando consulta a la Payments App
+    const paymentsData = await fetchPaymentsAppPricingMock()
+
+    // Actualizamos la reserva a CONFIRMADA
+    await prisma.reservation.update({
+      where: { id },
+      data: { status: 'PAID', effective_price: paymentsData.estimated_price } 
+    })
+    revalidatePath('/mis-viajes')
+  }
+
+  // --- SERVER ACTION: Enviar reseña y crear notificación ---
+  async function enviarFeedback(formData: FormData) {
+    'use server'
+    try {
+      const id = formData.get('reserva_id') as string
+      const { userId: actionUserId } = await auth()
+      
+      if (actionUserId) {
+        // Enviamos feedback (Mock)
+        await submitFeedbackMock(id, actionUserId)
+
+        await prisma.passengerNotification.create({
+          data: { 
+            passenger_user_id: actionUserId, 
+            reservation_id: id,
+            type: 'REVIEW_SUBMITTED',
+            message: '¡Gracias por tu reseña! ⭐ Hemos enviado el feedback al conductor.'
+          }
+        })
+      }
+    } catch (error) {
+      console.error("No se pudo guardar la notificación (posible error de conexión a internet):", error)
+    }
+    revalidatePath('/mis-viajes')
+  }
+
+  // --- SERVER ACTION: Limpiar notificaciones ---
+  async function limpiarNotificaciones() {
+    'use server'
+    const { userId: actionUserId } = await auth()
+    if (actionUserId) {
+      await prisma.passengerNotification.updateMany({
+        where: { passenger_user_id: actionUserId, read_at: null },
+        data: { read_at: new Date() }
+      })
+      revalidatePath('/mis-viajes')
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F7F9FB] text-[#0A192F]">
+      
+      {/* NAVEGACIÓN SUPERIOR (TopNavBar) */}
+      <nav className="bg-[#FFFFFF] h-20 w-full flex items-center justify-between px-6 sticky top-0 z-50 border-b border-[#D8DADC] shadow-sm">
+        <div className="flex items-center">
+          <Link href="/" className="text-[24px] font-extrabold italic text-[#0A192F] tracking-tight">WeShuttle</Link>
+        </div>
+        <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center h-full gap-8">
+          <Link href="/" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Inicio</Link>
+          <Link href="/mis-viajes" className="text-[#0A192F] font-bold text-[14px] h-full flex items-center border-b-2 border-[#0A192F]">Mis Viajes</Link>
+          <Link href="/reservar" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Reservar</Link>
+        </div>
+        <div className="flex items-center gap-4 h-full">
+          {/* CAMPANITA DE NOTIFICACIONES */}
+          <div className="relative group flex items-center h-full" tabIndex={0}>
+            <div className="cursor-pointer text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 relative flex items-center justify-center p-2 rounded-full hover:bg-[#F7F9FB]">
+              <span className="material-symbols-outlined text-[24px]">notifications</span>
+              {notificaciones.length > 0 && <span className="absolute top-1 right-1 bg-[#DC2626] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
+            </div>
+            {/* Menú desplegable con puente invisible */}
+            <div className="fixed left-4 right-4 top-[72px] sm:absolute sm:top-[100%] sm:left-auto sm:right-0 sm:w-72 z-50 hidden group-hover:block group-focus-within:block sm:pt-1">
+              <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-[#D8DADC] flex justify-between items-center bg-[#F7F9FB]">
+                  <h3 className="text-[16px] font-semibold text-[#0A192F]">Notificaciones</h3>
+                  {notificaciones.length > 0 && (
+                    <form action={limpiarNotificaciones}>
+                      <button type="submit" className="text-[12px] text-[#0A192F] font-bold uppercase tracking-widest hover:underline">Marcar leídas</button>
+                    </form>
+                  )}
+                </div>
+                <div className="max-h-64 overflow-y-auto p-2">
+                  {notificaciones.length === 0 ? (
+                    <p className="p-4 text-center text-[14px] text-[#475569]">No hay avisos nuevos.</p>
+                  ) : (
+                    notificaciones.map(notif => (
+                      <div key={notif.id} className="p-3 mb-1 bg-[#F7F9FB] text-[#0A192F] text-[12px] rounded-lg border border-[#D8DADC]">
+                        {notif.message}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          {isAdmin && (
+            <Link href="/admin" className="border border-[#0A192F] text-[#0A192F] px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-[#F7F9FB] transition-colors duration-200">
+              Panel Admin
+            </Link>
+          )}
+          <div className="w-[40px] h-[40px] rounded-full border border-[#D8DADC] flex items-center justify-center overflow-hidden bg-white">
+            <UserButton />
+          </div>
+        </div>
+      </nav>
+
+      <main className="py-[32px] px-[24px] md:px-[48px] max-w-7xl mx-auto pb-24 md:pb-8">
+        
+        {/* LAYOUT: DOS COLUMNAS DESIGUALES */}
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
+          
+          {/* --- SECCIÓN 1: VIAJES ACTIVOS --- */}
+          <section className="w-full lg:w-2/3 flex flex-col gap-6">
+            
+            {/* ENCABEZADO (Alineado adentro de la columna para subir el historial) */}
+            <header className="mb-2">
+                <Link href={viajeIdParam ? (fromParam === 'home' ? '/' : '/mis-viajes') : "/"} className="inline-flex items-center gap-1.5 text-[#475569] hover:text-[#0A192F] text-[12px] font-bold uppercase tracking-widest transition-colors mb-4">
+                  <span className="material-symbols-outlined text-[16px]">arrow_back</span> {viajeIdParam ? (fromParam === 'home' ? 'Volver al Inicio' : 'Volver a Mis Viajes') : 'Volver al Inicio'}
+                </Link>
+                <h1 className="text-[32px] font-bold text-[#0A192F] tracking-tight">{viajeIdParam ? 'Detalle de Reserva' : 'Mis Viajes'}</h1>
+                <p className="text-[#475569] text-[16px] mt-1">{viajeIdParam ? 'Información operativa específica de tu viaje.' : 'Gestión y estado en tiempo real de tus trayectos corporativos.'}</p>
+            </header>
+
+          {viajesActivos.map((reserva) => {
+            const isPast = new Date(reserva.departure_time) < ahora;
+            return (
+            <div key={reserva.id} id={`viaje-${reserva.id}`} className="bg-[#FFFFFF] border border-[#D8DADC] rounded-[12px] shadow-sm flex flex-col md:flex-row scroll-mt-24 overflow-hidden">
+              
+              {/* PARTE IZQUIERDA: TIMELINE Y DETALLES */}
+              <div className="flex-1 p-6 md:p-8 flex flex-col">
+                {/* Header de Tarjeta */}
+                <div className="flex justify-between items-center mb-6">
+                  <p className="text-[12px] font-bold uppercase text-[#475569] flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+                    {new Date(reserva.departure_time).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' })}
+                  </p>
+                  <span className={`px-2.5 py-1 rounded-[6px] text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border ${
+                    reserva.status === 'PENDING_DRIVER' ? 'bg-[#F59E0B]/10 text-[#B45309] border-[#F59E0B]/20' :
+                    reserva.status === 'CONFIRMED' ? 'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20' :
+                    reserva.status === 'PAID' ? 'bg-[#3B82F6]/10 text-[#1D4ED8] border-[#3B82F6]/20' :
+                    'bg-[#EF4444]/10 text-[#B91C1C] border-[#EF4444]/20'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      reserva.status === 'PENDING_DRIVER' ? 'bg-[#F59E0B] animate-pulse' : 
+                      reserva.status === 'CONFIRMED' ? 'bg-[#10B981]' : 
+                      reserva.status === 'PAID' ? 'bg-[#3B82F6]' : 
+                      'bg-[#EF4444]'
+                    }`}></span>
+                    {reserva.status === 'PENDING_DRIVER' ? 'Buscando Unidad' : reserva.status === 'CONFIRMED' ? 'Confirmado' : reserva.status === 'PAID' ? 'Abonado' : 'Cancelado'}
+                  </span>
+                </div>
+
+                {/* Timeline */}
+                <div className="relative pl-6 border-l-2 border-dashed border-[#D8DADC] ml-2 mb-8 space-y-8 flex-1">
+                  <div className="relative">
+                    <span className="absolute -left-[31px] top-1 w-3 h-3 bg-[#FFFFFF] border-[3px] border-[#0A192F] rounded-full"></span>
+                    <p className="text-[14px] text-[#475569] font-medium leading-none mb-1">{new Date(reserva.departure_time).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs</p>
+                    <h3 className="text-[18px] font-bold text-[#0A192F] leading-tight">{reserva.pickup_address}</h3>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute -left-[31px] top-1 w-3 h-3 bg-[#FFFFFF] border-[3px] border-[#10B981] rounded-full"></span>
+                    <p className="text-[14px] text-[#475569] font-medium leading-none mb-1">Destino Estimado</p>
+                    <h3 className="text-[18px] font-bold text-[#0A192F] leading-tight">{reserva.destination.name}</h3>
+                  </div>
+                </div>
+
+                {/* Fila de Detalles Técnicos */}
+                {reserva.assigned_driver_snapshot && (
+                  <div className="flex flex-col sm:flex-row gap-4 p-4 bg-[#F7F9FB] rounded-[8px] border border-[#D8DADC]">
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] mb-1">Vehículo Asignado</p>
+                      <p className="text-[14px] font-semibold text-[#0A192F]">{(reserva.assigned_driver_snapshot as any).vehiculo}</p>
+                      <p className="text-[12px] font-mono text-[#475569] mt-0.5">{(reserva.assigned_driver_snapshot as any).patente}</p>
+                    </div>
+                    <div className="flex-1 sm:border-l border-[#D8DADC] sm:pl-4">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] mb-1">Ocupación</p>
+                      <div className="flex items-center gap-1.5 text-[#0A192F]">
+                        <span className="material-symbols-outlined text-[18px]">group</span>
+                        <span className="text-[14px] font-bold">{(reserva.assigned_driver_snapshot as any).ocupacion || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* PARTE DERECHA: CONDUCTOR Y ACCIONES */}
+              <div className="w-full md:w-72 bg-[#F7F9FB] border-t md:border-t-0 md:border-l border-[#D8DADC] p-6 md:p-8 flex flex-col justify-between shrink-0">
+                
+                <div className="mb-6">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] mb-4">Información Operativa</p>
+                  {reserva.assigned_driver_snapshot ? (
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full border border-[#D8DADC] bg-[#FFFFFF] flex items-center justify-center text-[14px] font-bold text-[#0A192F]">
+                        {(reserva.assigned_driver_snapshot as any).nombre.split(' ').map((n: string) => n[0]).join('').substring(0,2)}
+                      </div>
+                      <div>
+                    <h3 className="text-[14px] font-bold text-[#0A192F]">{(reserva.assigned_driver_snapshot as any).nombre}</h3>
+                        <p className="text-[12px] font-bold text-[#F59E0B] flex items-center gap-0.5 mt-0.5">
+                          <span className="material-symbols-outlined text-[14px] fill-current">star</span> {(reserva.assigned_driver_snapshot as any).rating || '4.0'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-[12px] text-[#475569] italic">Asignación pendiente...</div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-[8px] p-3 text-center mb-2 shadow-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569]">{reserva.status === 'CANCELED' ? 'Tarifa Anulada' : 'Tarifa Estimada'}</p>
+                    <p className={`text-[20px] font-bold mt-0.5 ${reserva.status === 'CANCELED' ? 'text-[#475569] line-through decoration-[#EF4444] opacity-70' : 'text-[#0A192F]'}`}>${reserva.max_price?.toLocaleString('es-AR') || '0'}</p>
+                  </div>
+
+                  {/* Acciones de Flujo de Negocio */}
+                  {!isPast && reserva.status === 'PENDING_DRIVER' && (
+                    <form action={simularConfirmacion}>
+                      <input type="hidden" name="reserva_id" value={reserva.id} />
+                      <button type="submit" className="w-full py-2.5 rounded-[8px] border-2 border-[#0A192F] text-[#0A192F] text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F] hover:text-white transition-colors">
+                        Simular Asignación
+                      </button>
+                    </form>
+                  )}
+                  
+                  {!isPast && reserva.status === 'CONFIRMED' && (
+                    <form action={simularPago}>
+                      <input type="hidden" name="reserva_id" value={reserva.id} />
+                      <button type="submit" className="w-full py-2.5 rounded-[8px] bg-[#0A192F] text-white text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm">
+                        Simular Pago
+                      </button>
+                    </form>
+                  )}
+
+                  {!isPast && ['PENDING_DRIVER', 'CONFIRMED'].includes(reserva.status) && (
+                    <form action={cancelarReserva}>
+                      <input type="hidden" name="reserva_id" value={reserva.id} />
+                      <button type="submit" className="w-full py-2.5 rounded-[8px] bg-[#EF4444]/10 text-[#DC2626] border border-[#EF4444]/20 text-[12px] font-bold uppercase tracking-widest hover:bg-[#EF4444]/20 transition-colors">
+                        Cancelar Viaje
+                      </button>
+                    </form>
+                  )}
+
+                  {isPast && ['PENDING_DRIVER', 'CONFIRMED'].includes(reserva.status) && (
+                    <div className="bg-[#F7F9FB] border border-[#D8DADC] rounded-[8px] p-3 text-center shadow-sm">
+                      <span className="text-[11px] font-bold text-[#EF4444] uppercase tracking-widest">Viaje Expirado</span>
+                      <p className="text-[10px] text-[#475569] mt-1 leading-tight">La fecha de partida ya pasó. No se pueden realizar acciones.</p>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+            )
+          })}
+
+          {viajesActivos.length === 0 && (
+            <div className="bg-[#FFFFFF] p-12 rounded-[12px] border border-[#D8DADC] border-dashed text-center">
+              <span className="material-symbols-outlined text-4xl text-[#D8DADC] mb-4 block">directions_bus</span>
+              <h3 className="text-[20px] font-bold text-[#0A192F] mb-2">{viajeIdParam ? 'Viaje no encontrado' : 'No tienes viajes activos'}</h3>
+              <p className="text-[#475569] text-[14px] mb-6">{viajeIdParam ? 'El detalle de esta reserva no se encuentra disponible.' : 'Aún no has agendado ningún traslado corporativo.'}</p>
+              <Link href={viajeIdParam ? (fromParam === 'home' ? '/' : '/mis-viajes') : "/reservar"} className="inline-block bg-[#0A192F] text-white px-6 py-3 rounded-[8px] text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm">
+                {viajeIdParam ? (fromParam === 'home' ? 'Volver al Inicio' : 'Volver a Mis Viajes') : 'Hacer mi primera reserva'}
+              </Link>
+            </div>
+          )}
+          </section>
+
+          {/* --- SECCIÓN 2: HISTORIAL --- */}
+          {totalHistorial > 0 && (
+            <aside className="w-full lg:w-1/3 flex flex-col gap-4 lg:mt-[44px]">
+              <h2 className="text-[20px] font-bold text-[#0A192F] mb-2">Historial Reciente</h2>
+              
+              <div className="flex flex-col gap-4">
+                {historial.map((reserva) => (
+                  <div key={reserva.id} className="bg-[#FFFFFF] border border-[#D8DADC] rounded-[12px] p-5 shadow-sm hover:border-[#0A192F]/30 transition-colors">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-[12px] font-bold text-[#475569]">{new Date(reserva.departure_time).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}</span>
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${reserva.status === 'PAID' ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+                        {reserva.status === 'PAID' ? 'Completado' : 'Cancelado'}
+                      </span>
+                    </div>
+                    <h3 className="text-[16px] font-bold text-[#0A192F] mb-4 truncate">{reserva.destination.name}</h3>
+                    
+                    <div className="flex justify-between items-center pt-4 border-t border-[#D8DADC]">
+                      {reserva.status === 'PAID' ? (
+                        <form action={enviarFeedback}>
+                          <input type="hidden" name="reserva_id" value={reserva.id} />
+                          <button type="submit" className="text-[12px] font-bold text-[#F59E0B] hover:underline flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[16px] fill-current">star</span> Calificar
+                          </button>
+                        </form>
+                      ) : (
+                        <span className="text-[12px] text-[#475569]">Sin acciones</span>
+                      )}
+                      <Link href={`/mis-viajes?viaje_id=${reserva.id}`} className="text-[12px] font-bold text-[#0A192F] hover:underline">Detalles &gt;</Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* CONTROLES DE PAGINACIÓN */}
+              {totalPages > 1 && (
+                <div className="flex justify-between items-center mt-2 pt-4 border-t border-[#D8DADC]">
+                  <span className="text-[12px] text-[#475569] font-medium">Página {currentPage} de {totalPages}</span>
+                  <div className="flex gap-2">
+                    {currentPage > 1 ? (
+                      <Link href={`/mis-viajes?page=${currentPage - 1}`} className="px-3 py-1.5 bg-[#FFFFFF] border border-[#D8DADC] text-[#0A192F] rounded hover:bg-[#F7F9FB] text-[12px] font-bold transition-colors">Anterior</Link>
+                    ) : (
+                      <span className="px-3 py-1.5 bg-[#F7F9FB] border border-[#D8DADC] text-[#475569] rounded text-[12px] font-bold opacity-50 cursor-not-allowed">Anterior</span>
+                    )}
+                    {currentPage < totalPages ? (
+                      <Link href={`/mis-viajes?page=${currentPage + 1}`} className="px-3 py-1.5 bg-[#FFFFFF] border border-[#D8DADC] text-[#0A192F] rounded hover:bg-[#F7F9FB] text-[12px] font-bold transition-colors">Siguiente</Link>
+                    ) : (
+                      <span className="px-3 py-1.5 bg-[#F7F9FB] border border-[#D8DADC] text-[#475569] rounded text-[12px] font-bold opacity-50 cursor-not-allowed">Siguiente</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </aside>
+          )}
+        </div>
+
+      </main>
+
+      {/* NAVEGACIÓN MÓVIL (Bottom Bar estilo App) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 h-[64px] bg-[#FFFFFF] border-t border-[#D8DADC] flex items-center justify-around z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe">
+        <Link href="/" className="flex flex-col items-center justify-center w-full h-full text-[#475569] hover:text-[#0A192F] active:bg-[#F7F9FB]">
+          <span className="material-symbols-outlined text-[24px]">home</span>
+          <span className="text-[10px] font-bold mt-0.5">Inicio</span>
+        </Link>
+        <Link href="/mis-viajes" className="flex flex-col items-center justify-center w-full h-full text-[#0A192F] bg-[#F7F9FB]">
+          <span className="material-symbols-outlined text-[24px] font-bold">directions_bus</span>
+          <span className="text-[10px] font-bold mt-0.5">Mis Viajes</span>
+        </Link>
+        <Link href="/reservar" className="flex flex-col items-center justify-center w-full h-full text-[#475569] hover:text-[#0A192F] active:bg-[#F7F9FB]">
+          <span className="material-symbols-outlined text-[24px]">add_circle</span>
+          <span className="text-[10px] font-bold mt-0.5">Reservar</span>
+        </Link>
+      </div>
+    </div>
+  )
+}
