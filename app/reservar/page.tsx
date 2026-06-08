@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { fetchPaymentsAppPricingMock, createDriverAppPoolMock } from '@/lib/api'
 import { UserButton } from "@clerk/nextjs"
 import { revalidatePath } from 'next/cache'
+import AddressAutocomplete from './AddressAutocomplete'
 
 export default async function NuevaReservaPage() {
   // 1. Verificamos que el usuario esté autenticado
@@ -56,6 +57,24 @@ export default async function NuevaReservaPage() {
       throw new Error("Error de negocio: No hay asientos disponibles en la unidad para este horario y destino.")
     }
 
+    // 🌟 NUEVO: Obtener coordenadas reales usando la API de OpenStreetMap (Geocoding)
+    let lat = -38.7183; // Coordenada por defecto (Centro de Bahía Blanca)
+    let lng = -62.2663;
+    try {
+      // Le sumamos la ciudad para que la búsqueda sea mucho más exacta
+      const query = encodeURIComponent(`${punto_partida}, Bahía Blanca, Argentina`);
+      const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`, {
+        headers: { 'User-Agent': 'WeShuttle-RiderApp/1.0' }
+      });
+      const geoData = await geoRes.json();
+      if (geoData && geoData.length > 0) {
+        lat = parseFloat(geoData[0].lat);
+        lng = parseFloat(geoData[0].lon);
+      }
+    } catch (error) {
+      console.error("Error obteniendo coordenadas:", error);
+    }
+
     // Registramos al usuario en nuestra base de datos si es su primera vez
     const pasajeroDb = await prisma.passenger.upsert({
       where: { clerk_user_id: actionUserId },
@@ -78,6 +97,8 @@ export default async function NuevaReservaPage() {
         destination_id: destino_id,
         departure_time: fechaViaje,
         pickup_address: punto_partida,
+        pickup_lat: lat, // 🌟 Guardamos latitud real
+        pickup_lng: lng, // 🌟 Guardamos longitud real
         status: 'PENDING_DRIVER',
         max_price: paymentsData.max_price,
         currency: paymentsData.currency || "ARS",
@@ -85,7 +106,7 @@ export default async function NuevaReservaPage() {
       }
     })
 
-    redirect('/mis-viajes')
+    redirect('/mis-viajes?toast=Estado:+Buscando+Unidad')
   }
 
   // Calculamos la hora mínima permitida para el input date (ahora + 2hs)
@@ -199,10 +220,7 @@ export default async function NuevaReservaPage() {
             
             <div>
               <label htmlFor="punto_partida" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Punto de Recogida</label>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">location_on</span>
-                <input type="text" id="punto_partida" name="punto_partida" placeholder="Ej: Sarmiento 850" required minLength={5} maxLength={100} pattern=".*[a-zA-ZáéíóúÁÉÍÓÚñÑ].*" title="Debe incluir al menos una letra (Ej: Calle 123)" className="w-full min-w-0 h-[56px] pl-10 pr-2 md:pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
-              </div>
+              <AddressAutocomplete />
               <p className="text-[12px] text-[#475569] mt-2">Ej: Entrada principal Edificio Titanium</p>
             </div>
             

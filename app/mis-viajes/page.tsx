@@ -109,6 +109,7 @@ export default async function MisViajesPage({
       data: { status: 'CANCELED' }
     })
     revalidatePath('/mis-viajes')
+    redirect('/mis-viajes?toast=Estado:+Cancelado&toastType=error')
   }
 
   // --- SERVER ACTIONS SIMULADAS (Dev Mode / Mocks) ---
@@ -143,6 +144,7 @@ export default async function MisViajesPage({
       }
     })
     revalidatePath('/mis-viajes')
+    redirect('/mis-viajes?toast=Estado:+Confirmado')
   }
 
   async function simularPago(formData: FormData) {
@@ -163,6 +165,7 @@ export default async function MisViajesPage({
       data: { status: 'PAID', effective_price: paymentsData.estimated_price } 
     })
     revalidatePath('/mis-viajes')
+    redirect('/mis-viajes?toast=Estado:+Abonado')
   }
 
   // --- SERVER ACTION: Enviar reseña y crear notificación ---
@@ -189,6 +192,7 @@ export default async function MisViajesPage({
       console.error("No se pudo guardar la notificación (posible error de conexión a internet):", error)
     }
     revalidatePath('/mis-viajes')
+    redirect('/mis-viajes?toast=¡Gracias+por+tu+calificación!')
   }
 
   // --- SERVER ACTION: Limpiar notificaciones ---
