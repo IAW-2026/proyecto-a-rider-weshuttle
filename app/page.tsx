@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { UserButton } from "@clerk/nextjs"
 import { revalidatePath } from 'next/cache'
+import { getUserCreditBalanceMock } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +36,9 @@ export default async function VistaPublicaViajes() {
   const viajesRealizados = userId ? await prisma.reservation.count({
     where: { passenger_user_id: userId, payment_status: 'PAID', reservation_status: { not: 'CANCELED' } }
   }) : 0;
+
+  // Obtenemos el saldo a favor simulando consulta a la Payments App
+  const creditData = userId ? await getUserCreditBalanceMock(userId) : { available_credit: 0 };
 
   const emailName = user?.emailAddresses[0]?.emailAddress?.split('@')[0];
   const displayName = user?.firstName || emailName || 'Pasajero';
@@ -133,17 +137,18 @@ export default async function VistaPublicaViajes() {
         {/* HEADER WELCOME */}
         <header className="mb-10">
           <h2 className="text-[32px] font-bold text-[#0A192F] mb-2 tracking-tight">Bienvenido/a, {displayName}</h2>
-          <p className="text-[#475569] text-[16px] max-w-2xl">Gestiona tus traslados corporativos con precisión y facilidad. Visualiza el estado de la flota en tiempo real.</p>
+          <p className="text-[#475569] text-[16px] max-w-2xl">Gestiona tus traslados corporativos con precisión y facilidad. Tu asiento asegurado en las mejores unidades.</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           
           {/* HERO BANNER */}
-          <section className={`bg-[#0A192F] text-[#F7F9FB] p-8 md:p-10 rounded-lg shadow-sm flex flex-col items-start text-left justify-center ${userId ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
-            <h2 className="text-[32px] font-bold tracking-tight mb-3">¿A dónde viajas hoy?</h2>
-            <p className="text-[16px] text-[#D8DADC] mb-8 max-w-xl leading-relaxed">Gestiona tus traslados corporativos con precisión y comodidad. Tu asiento asegurado en las mejores unidades.</p>
-            <Link href="/reservar" className="bg-[#FFFFFF] text-[#0A192F] px-8 py-3.5 rounded-lg text-[12px] font-bold uppercase tracking-widest hover:bg-gray-100 transition-colors shadow-sm text-center w-full sm:w-auto">
-              Reservar Asiento
+          <section className={`bg-[#0A192F] text-[#F7F9FB] p-8 md:p-10 rounded-xl shadow-sm flex flex-col items-start text-left justify-center relative overflow-hidden ${userId ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+            <span className="material-symbols-outlined absolute -right-10 -bottom-10 text-[180px] opacity-5 pointer-events-none">directions_bus</span>
+            <h2 className="text-[32px] font-bold tracking-tight mb-3 relative z-10">¿A dónde viajamos hoy?</h2>
+            <p className="text-[16px] text-[#D8DADC] mb-8 max-w-xl leading-relaxed relative z-10">Reserva tu asiento en nuestras combis corporativas con hasta 24hs de anticipación y ahorrá compartiendo el viaje.</p>
+            <Link href="/reservar" className="bg-[#FFFFFF] text-[#0A192F] px-8 py-3.5 rounded-lg text-[12px] font-bold uppercase tracking-widest hover:bg-gray-100 transition-colors shadow-sm text-center w-full sm:w-auto relative z-10">
+              Agendar traslado
             </Link>
           </section>
 
@@ -152,9 +157,9 @@ export default async function VistaPublicaViajes() {
             <div className="flex flex-col gap-6 lg:col-span-1">
               
               {/* Widget: Próximo Viaje */}
-              <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg p-6 shadow-sm flex flex-col justify-center hover:border-[#0A192F]/30 transition-colors flex-1">
-                <p className="text-[12px] font-bold uppercase tracking-widest text-[#475569] mb-3">Tu Próximo Viaje</p>
-                {proximoViaje ? (
+              {proximoViaje && (
+                <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col justify-center hover:border-[#0A192F]/30 transition-colors flex-1">
+                  <p className="text-[12px] font-bold uppercase tracking-widest text-[#475569] mb-3">Tu Próximo Viaje</p>
                   <div className="flex flex-col gap-3">
                     <div className="overflow-hidden">
                       <h3 className="text-[18px] font-bold text-[#0A192F] leading-tight truncate">{proximoViaje.pickup_address}</h3>
@@ -163,29 +168,72 @@ export default async function VistaPublicaViajes() {
                         <span className="material-symbols-outlined text-[16px]">schedule</span> {new Date(proximoViaje.departure_time).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} hs
                       </p>
                     </div>
-                  <Link href={`/mis-viajes?viaje_id=${proximoViaje.id}&from=home`} className="mt-1 inline-flex items-center justify-center gap-1 text-[#0A192F] text-[12px] font-bold uppercase hover:bg-[#e2e8f0] bg-[#F7F9FB] border border-[#D8DADC] px-4 py-2.5 rounded-lg transition-colors w-full">
+                    <Link href={`/mis-viajes?viaje_id=${proximoViaje.id}&from=home`} className="mt-1 inline-flex items-center justify-center gap-1 text-[#0A192F] text-[12px] font-bold uppercase hover:bg-[#e2e8f0] bg-[#F7F9FB] border border-[#D8DADC] px-4 py-2.5 rounded-lg transition-colors w-full">
                       Ver detalles <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
                     </Link>
                   </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    <h3 className="text-[15px] font-medium text-[#475569]">No tenés viajes programados</h3>
-                    <Link href="/reservar" className="inline-flex items-center justify-center gap-1 text-[#0A192F] text-[12px] font-bold uppercase hover:bg-[#e2e8f0] bg-[#F7F9FB] border border-[#D8DADC] px-4 py-2.5 rounded-lg transition-colors w-full">
-                      Reservar ahora <span className="material-symbols-outlined text-[14px]">add</span>
-                    </Link>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
               
-              {/* Widget: Historial Corto */}
-              <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg p-5 shadow-sm flex items-center justify-between hover:border-[#0A192F]/30 transition-colors">
-                <p className="text-[12px] font-bold uppercase tracking-widest text-[#475569]">Viajes Completados</p>
-                <h3 className="text-[28px] font-bold text-[#0A192F] leading-none">{viajesRealizados.toString().padStart(2, '0')}</h3>
+              {/* Widgets de Estadísticas Pequeñas */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-4 shadow-sm hover:border-[#0A192F]/30 transition-colors flex flex-col justify-center">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] mb-1">Viajes</p>
+                  <h3 className="text-[24px] font-bold text-[#0A192F] leading-none">{viajesRealizados.toString().padStart(2, '0')}</h3>
+                </div>
+                
+                <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-4 shadow-sm hover:border-[#0A192F]/30 transition-colors relative overflow-hidden flex flex-col justify-center">
+                  <span className="material-symbols-outlined absolute -bottom-3 -right-2 text-[64px] text-[#10B981] opacity-5">account_balance_wallet</span>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#10B981] mb-1">Ahorro a favor</p>
+                  <h3 className="text-[24px] font-bold text-[#0A192F] leading-none">${creditData.available_credit.toLocaleString('es-AR')}</h3>
+                </div>
               </div>
 
             </div>
           )}
         </div>
+
+        {/* SECCIÓN DE BENEFICIOS / INFO CORPORATIVA */}
+        <section className="mt-12 mb-8">
+          <div className="mb-6">
+            <h3 className="text-[20px] font-bold text-[#0A192F]">Ventajas de viajar en Pool</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col items-start cursor-default">
+              <div className="w-10 h-10 rounded-full bg-[#10B981]/10 flex items-center justify-center mb-4 text-[#10B981]">
+                <span className="material-symbols-outlined text-[20px]">eco</span>
+              </div>
+              <h4 className="text-[16px] font-bold text-[#0A192F] mb-2">Huella de Carbono</h4>
+              <p className="text-[13px] text-[#475569] leading-relaxed">Al compartir tu viaje, reducís significativamente las emisiones de CO2 en los accesos al polo industrial.</p>
+            </div>
+            <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col items-start cursor-default">
+              <div className="w-10 h-10 rounded-full bg-[#3B82F6]/10 flex items-center justify-center mb-4 text-[#3B82F6]">
+                <span className="material-symbols-outlined text-[20px]">savings</span>
+              </div>
+              <h4 className="text-[16px] font-bold text-[#0A192F] mb-2">Ahorro Garantizado</h4>
+              <p className="text-[13px] text-[#475569] leading-relaxed">Pagás un precio tope inicial y recibís crédito a favor si la combi logra mayor ocupación en el trayecto.</p>
+            </div>
+            <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col items-start cursor-default">
+              <div className="w-10 h-10 rounded-full bg-[#F59E0B]/10 flex items-center justify-center mb-4 text-[#F59E0B]">
+                <span className="material-symbols-outlined text-[20px]">work_history</span>
+              </div>
+              <h4 className="text-[16px] font-bold text-[#0A192F] mb-2">Puntualidad B2B</h4>
+              <p className="text-[13px] text-[#475569] leading-relaxed">Rutas de transporte optimizadas y choferes profesionales para asegurar que llegues a tu turno a tiempo.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* FOOTER INFORMATIVO */}
+        <footer className="mt-16 border-t border-[#D8DADC] pt-8 flex flex-col items-center justify-center text-center gap-2">
+          <p className="text-[12px] font-bold text-[#0A192F]">WeShuttle Mobility © 2026</p>
+          <div className="flex items-center gap-4 text-[11px] font-medium text-[#475569]">
+            <Link href="#" className="hover:text-[#3B82F6] transition-colors">Términos y Condiciones</Link>
+            <span>|</span>
+            <Link href="#" className="hover:text-[#3B82F6] transition-colors">Preguntas Frecuentes (FAQ)</Link>
+            <span>|</span>
+            <Link href="#" className="hover:text-[#3B82F6] transition-colors">Soporte B2B</Link>
+          </div>
+        </footer>
 
       </main>
 

@@ -6,11 +6,20 @@ import { fetchPaymentsAppPricingMock } from '@/lib/api'
 import { UserButton } from "@clerk/nextjs"
 import { revalidatePath } from 'next/cache'
 import AddressAutocomplete from './AddressAutocomplete'
+import DateTimeInputs from './DateTimeInputs'
 
-export default async function NuevaReservaPage() {
+export default async function NuevaReservaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   // 1. Verificamos que el usuario esté autenticado
   const { userId } = await auth()
   if (!userId) redirect('/sign-in')
+
+  // Procesamos los query params para la pre-selección inteligente
+  const params = await searchParams;
+  const preselectedDestino = typeof params?.destino_id === 'string' ? params.destino_id : '';
 
   const user = await currentUser()
   const userEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase() ?? '';
@@ -29,12 +38,13 @@ export default async function NuevaReservaPage() {
   async function confirmarReserva(formData: FormData) {
     'use server'
     const destino_id = formData.get('destino_id') as string
-    const horario = formData.get('horario') as string
+    const fecha = formData.get('fecha') as string
+    const hora = formData.get('hora') as string
     const punto_partida = formData.get('punto_partida') as string
 
     // Validación básica de los datos ingresados
     const tieneLetras = /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(punto_partida || '');
-    if (!destino_id || !horario || !punto_partida || punto_partida.trim().length < 5 || !tieneLetras) {
+    if (!destino_id || !fecha || !hora || !punto_partida || punto_partida.trim().length < 5 || !tieneLetras) {
       throw new Error("Datos inválidos. El punto de recogida debe ser una dirección real (ej: Calle 123).")
     }
 
@@ -43,6 +53,7 @@ export default async function NuevaReservaPage() {
     if (!actionUserId || !actionUser) return
 
     // Regla de Negocio: La brecha horaria permitida es desde 24 horas hasta 1 hora antes de la partida.
+    const horario = `${fecha}T${hora}`;
     const fechaViaje = new Date(`${horario}-03:00`)
     const ahora = Date.now()
     const unaHoraEnMs = 60 * 60 * 1000 - (5 * 60 * 1000) // 1h con 5 mins de margen
@@ -116,6 +127,11 @@ export default async function NuevaReservaPage() {
   const minDateTime = minArgConMargen.toISOString().slice(0, 16)
   const maxArgConMargen = new Date(ahoraUtc.getTime() - 3 * 60 * 60 * 1000 + 24 * 60 * 60 * 1000)
   const maxDateTime = maxArgConMargen.toISOString().slice(0, 16)
+
+  const minDate = minDateTime.slice(0, 10);
+  const maxDate = maxDateTime.slice(0, 10);
+  const defaultTime = minDateTime.slice(11, 16);
+  const maxTime = maxDateTime.slice(11, 16);
 
   // --- SERVER ACTION: Limpiar notificaciones ---
   async function limpiarNotificaciones() {
@@ -201,7 +217,7 @@ export default async function NuevaReservaPage() {
               <label htmlFor="destino_id" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Destino Final</label>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">map</span>
-                <select id="destino_id" name="destino_id" required className="w-full min-w-0 h-[56px] pl-10 pr-8 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] appearance-none cursor-pointer truncate">
+                <select id="destino_id" name="destino_id" defaultValue={preselectedDestino} required className="w-full min-w-0 h-[56px] pl-10 pr-8 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] appearance-none cursor-pointer truncate">
                   <option value="">Seleccione su destino...</option>
                   {destinos.map(d => (
                     <option key={d.id} value={d.id}>{d.name}</option>
@@ -211,15 +227,8 @@ export default async function NuevaReservaPage() {
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2 w-full overflow-hidden">
-                <label htmlFor="horario" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Fecha y Horario de Partida</label>
-                <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">calendar_clock</span>
-                  <input type="datetime-local" id="horario" name="horario" min={minDateTime} max={maxDateTime} defaultValue={minDateTime} required className="w-full appearance-none min-w-0 max-w-full h-[56px] pl-10 pr-2 md:pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
-                </div>
-              </div>
-            </div>
+            {/* COMPONENTE INTELIGENTE DE SELECCIÓN DE DÍA Y HORA */}
+            <DateTimeInputs minDate={minDate} maxDate={maxDate} minTime={defaultTime} maxTime={maxTime} />
             
             <div>
               <label htmlFor="punto_partida" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Punto de Recogida</label>
