@@ -45,7 +45,7 @@ export default async function NuevaReservaPage({
     // Validación básica de los datos ingresados
     const tieneLetras = /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(punto_partida || '');
     if (!destino_id || !fecha || !hora || !punto_partida || punto_partida.trim().length < 5 || !tieneLetras) {
-      throw new Error("Datos inválidos. El punto de recogida debe ser una dirección real (ej: Calle 123).")
+      redirect('/reservar?toast=El+punto+de+recogida+debe+ser+una+dirección+real&toastType=error');
     }
 
     const { userId: actionUserId } = await auth()
@@ -59,13 +59,13 @@ export default async function NuevaReservaPage({
     const unaHoraEnMs = 60 * 60 * 1000 - (5 * 60 * 1000) // 1h con 5 mins de margen
     const veinticuatroHorasEnMs = 24 * 60 * 60 * 1000
     if (fechaViaje.getTime() < ahora + unaHoraEnMs || fechaViaje.getTime() > ahora + veinticuatroHorasEnMs) {
-      throw new Error("Error de negocio: Las reservas deben realizarse entre 1 y 24 horas antes de la partida.")
+      redirect('/reservar?toast=Las+reservas+deben+realizarse+entre+1+y+24+horas+antes&toastType=error');
     }
 
     // Regla de Negocio: Verificar que haya asientos disponibles
     const asientosDisponibles = true; // Simulación
     if (!asientosDisponibles) {
-      throw new Error("Error de negocio: No hay asientos disponibles en la unidad para este horario y destino.")
+      redirect('/reservar?toast=No+hay+asientos+disponibles+para+este+horario&toastType=error');
     }
 
     // 🌟 NUEVO: Obtener coordenadas reales usando la API de OpenStreetMap (Geocoding)

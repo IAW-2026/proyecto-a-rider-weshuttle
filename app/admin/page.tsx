@@ -26,12 +26,13 @@ async function actualizarDestino(formData: FormData) {
   const ubicacion_lat_long = formData.get('ubicacion') as string
 
   if (!id || !nombre || !ubicacion_lat_long || nombre.trim().length < 3) {
-    throw new Error("Datos inválidos. El nombre del destino y su ubicación son obligatorios.")
+    // Si falla la validación en el admin, simplemente cancelamos la acción en vez de romper la app
+    return;
   }
 
   await prisma.destination.update({
     where: { id },
-    data: { name: nombre, address: ubicacion_lat_long, lat: 0, lng: 0 }
+    data: { name: nombre, address: ubicacion_lat_long }
   })
   revalidatePath('/admin')
 }
@@ -256,9 +257,9 @@ export default async function GestionViajes({
                   <thead>
                     <tr className="bg-[#FFFFFF] border-b border-[#D8DADC]">
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Reserva ID</th>
-                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Pasajero / Destino</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Pasajero / Ruta</th>
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Horario</th>
-                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Estado Ops / Pago</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Tarifa / Estado</th>
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569] text-right">Pool ID</th>
                     </tr>
                   </thead>
@@ -268,28 +269,35 @@ export default async function GestionViajes({
                         <td className="px-6 py-4 text-[12px] font-mono text-[#475569]">{r.id.split('-')[0]}</td>
                         <td className="px-6 py-4">
                           <p className="text-[13px] font-bold text-[#0A192F]">{r.passenger?.full_name || 'Desconocido'}</p>
-                          <p className="text-[11px] text-[#475569] truncate max-w-[200px]">{r.destination?.name || 'Destino'}</p>
+                          <p className="text-[11px] text-[#475569] truncate max-w-[250px]" title={`${r.pickup_address} → ${r.destination?.name}`}>
+                            {r.pickup_address} <span className="mx-1">→</span> {r.destination?.name || 'Destino'}
+                          </p>
                         </td>
                         <td className="px-6 py-4 text-[13px] font-medium text-[#475569]">
                           {new Date(r.departure_time).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} hs
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col gap-1 items-start">
-                            <span className={`px-2 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-widest border ${
-                              r.reservation_status === 'CANCELED' ? 'bg-[#EF4444]/10 text-[#B91C1C] border-[#EF4444]/20' :
-                              r.reservation_status === 'PENDING_DRIVER' ? 'bg-[#F59E0B]/10 text-[#B45309] border-[#F59E0B]/20' :
-                              r.reservation_status === 'CONFIRMED' ? 'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20' :
-                              'bg-[#F7F9FB] text-[#475569] border-[#D8DADC]'
-                            }`}>
-                              OP: {r.reservation_status}
+                            <span className={`text-[13px] font-bold ${r.reservation_status === 'CANCELED' || r.payment_status !== 'PAID' ? 'text-[#475569] line-through decoration-[#EF4444] opacity-70' : 'text-[#0A192F]'}`}>
+                              ${(r.payment_status === 'PAID' ? (r.amount_charged ?? r.max_price) : (r.max_price ?? 0))?.toLocaleString('es-AR')}
                             </span>
-                            <span className={`px-2 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-widest border ${
-                              r.payment_status === 'PAID' ? 'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20' : 
-                              ['DENIED', 'CANCELED', 'EXPIRED'].includes(r.payment_status) ? 'bg-[#EF4444]/10 text-[#B91C1C] border-[#EF4444]/20' :
-                              'bg-[#F59E0B]/10 text-[#B45309] border-[#F59E0B]/20'
-                            }`}>
-                              $$: {r.payment_status}
-                            </span>
+                            <div className="flex gap-1 mt-0.5">
+                              <span className={`px-2 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-widest border ${
+                                r.reservation_status === 'CANCELED' ? 'bg-[#EF4444]/10 text-[#B91C1C] border-[#EF4444]/20' :
+                                r.reservation_status === 'PENDING_DRIVER' ? 'bg-[#F59E0B]/10 text-[#B45309] border-[#F59E0B]/20' :
+                                r.reservation_status === 'CONFIRMED' ? 'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20' :
+                                'bg-[#F7F9FB] text-[#475569] border-[#D8DADC]'
+                              }`}>
+                                OP: {r.reservation_status}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-widest border ${
+                                r.payment_status === 'PAID' ? 'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20' : 
+                                ['DENIED', 'CANCELED', 'EXPIRED'].includes(r.payment_status) ? 'bg-[#EF4444]/10 text-[#B91C1C] border-[#EF4444]/20' :
+                                'bg-[#F59E0B]/10 text-[#B45309] border-[#F59E0B]/20'
+                              }`}>
+                                $$: {r.payment_status}
+                              </span>
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right text-[12px] font-mono font-bold text-[#3B82F6]">

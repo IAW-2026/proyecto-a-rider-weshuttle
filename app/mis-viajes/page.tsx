@@ -96,13 +96,13 @@ export default async function MisViajesPage({
     // Verificamos que el viaje no haya expirado
     if (!reserva) return;
     
-    const isLocked = new Date(reserva.departure_time).getTime() - new Date().getTime() <= 60 * 60 * 1000;
-    if (isLocked) {
-      throw new Error("No se puede cancelar voluntariamente un viaje faltando menos de 1 hora (Estado LOCKED).");
+    if (new Date(reserva.departure_time) < new Date()) {
+      redirect('/mis-viajes?toast=No+se+puede+cancelar+un+viaje+que+ya+expiró&toastType=error');
     }
 
-    if (new Date(reserva.departure_time) < new Date()) {
-      throw new Error("No se puede cancelar un viaje que ya expiró.");
+    const isLocked = new Date(reserva.departure_time).getTime() - new Date().getTime() <= 60 * 60 * 1000;
+    if (isLocked) {
+      redirect('/mis-viajes?toast=No+se+puede+cancelar+faltando+menos+de+1+hora&toastType=error');
     }
 
     // Avisamos a la Driver App que liberamos el asiento
@@ -125,7 +125,7 @@ export default async function MisViajesPage({
     
     const reservaCheck = await prisma.reservation.findUnique({ where: { id } })
     if (!reservaCheck || new Date(reservaCheck.departure_time) < new Date()) {
-      throw new Error("El viaje ya expiró y no puede ser pagado.");
+      redirect('/mis-viajes?toast=El+viaje+ya+expiró+y+no+puede+ser+pagado&toastType=error');
     }
 
     // Obtenemos el precio estimado real simulando consulta a la Payments App
@@ -164,7 +164,7 @@ export default async function MisViajesPage({
 
     const reservaCheck = await prisma.reservation.findUnique({ where: { id } })
     if (!reservaCheck || new Date(reservaCheck.departure_time) < new Date()) {
-      throw new Error("El viaje ya expiró y no puede ser confirmado.");
+      redirect('/mis-viajes?toast=El+viaje+ya+expiró+y+no+puede+ser+confirmado&toastType=error');
     }
 
     // Obtenemos los datos simulados de los otros microservicios
