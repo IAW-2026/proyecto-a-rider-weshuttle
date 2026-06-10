@@ -45,7 +45,7 @@ export default async function NuevaReservaPage({
     // Validación básica de los datos ingresados
     const tieneLetras = /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(punto_partida || '');
     if (!destino_id || !fecha || !hora || !punto_partida || punto_partida.trim().length < 5 || !tieneLetras) {
-      redirect('/reservar?toast=El+punto+de+recogida+debe+ser+una+dirección+real&toastType=error');
+      redirect('/reservar?toast=Error:+Dirección+inválida&toastType=error');
     }
 
     const { userId: actionUserId } = await auth()
@@ -59,13 +59,13 @@ export default async function NuevaReservaPage({
     const unaHoraEnMs = 60 * 60 * 1000 - (5 * 60 * 1000) // 1h con 5 mins de margen
     const veinticuatroHorasEnMs = 24 * 60 * 60 * 1000
     if (fechaViaje.getTime() < ahora + unaHoraEnMs || fechaViaje.getTime() > ahora + veinticuatroHorasEnMs) {
-      redirect('/reservar?toast=Las+reservas+deben+realizarse+entre+1+y+24+horas+antes&toastType=error');
+      redirect('/reservar?toast=Error:+Horario+inválido&toastType=error');
     }
 
     // Regla de Negocio: Verificar que haya asientos disponibles
     const asientosDisponibles = true; // Simulación
     if (!asientosDisponibles) {
-      redirect('/reservar?toast=No+hay+asientos+disponibles+para+este+horario&toastType=error');
+      redirect('/reservar?toast=Error:+Sin+asientos+disponibles&toastType=error');
     }
 
     // 🌟 NUEVO: Obtener coordenadas reales usando la API de OpenStreetMap (Geocoding)
@@ -100,6 +100,11 @@ export default async function NuevaReservaPage({
       }
     })
 
+    // Regla de Negocio: Usuarios bloqueados no pueden crear nuevas reservas
+    if (pasajeroDb.status === 'BLOCKED') {
+      redirect('/reservar?toast=Estado+Pasajero:+Bloqueado&toastType=error');
+    }
+
     // Creamos la reserva inmutable con los datos obtenidos
     await prisma.reservation.create({
       data: {
@@ -118,7 +123,7 @@ export default async function NuevaReservaPage({
       }
     })
 
-    redirect('/mis-viajes?toast=Estado:+Pago+Pendiente')
+    redirect('/mis-viajes?toast=Reserva+creada+con+éxito')
   }
 
   // Calculamos la hora mínima y máxima permitida para el input date

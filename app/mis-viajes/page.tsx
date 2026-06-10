@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
-import { createDriverAppPoolMock, getDriverAppAssignedDriverMock, fetchPaymentsAppPricingMock, cancelReservationMock } from '@/lib/api'
+import { createDriverAppPoolMock, getDriverAppAssignedDriverMock, fetchPaymentsAppPricingMock, cancelReservationMock, getFeedbackAppRatingMock } from '@/lib/api'
 import { UserButton } from "@clerk/nextjs"
 
 export const dynamic = 'force-dynamic'
@@ -97,12 +97,12 @@ export default async function MisViajesPage({
     if (!reserva) return;
     
     if (new Date(reserva.departure_time) < new Date()) {
-      redirect('/mis-viajes?toast=No+se+puede+cancelar+un+viaje+que+ya+expiró&toastType=error');
+      redirect(`/mis-viajes?toast=Error:+Viaje+Expirado&toastType=error#viaje-${id}`);
     }
 
     const isLocked = new Date(reserva.departure_time).getTime() - new Date().getTime() <= 60 * 60 * 1000;
     if (isLocked) {
-      redirect('/mis-viajes?toast=No+se+puede+cancelar+faltando+menos+de+1+hora&toastType=error');
+      redirect(`/mis-viajes?toast=Error:+Pool+Cerrado&toastType=error#viaje-${id}`);
     }
 
     // Avisamos a la Driver App que liberamos el asiento
@@ -116,7 +116,7 @@ export default async function MisViajesPage({
       data: { reservation_status: 'CANCELED' }
     })
     revalidatePath('/mis-viajes')
-    redirect('/mis-viajes?toast=Estado:+Cancelado&toastType=error')
+    redirect(`/mis-viajes?toast=Viaje+cancelado&toastType=error#viaje-${id}`)
   }
 
   async function simularPago(formData: FormData) {
@@ -125,7 +125,7 @@ export default async function MisViajesPage({
     
     const reservaCheck = await prisma.reservation.findUnique({ where: { id } })
     if (!reservaCheck || new Date(reservaCheck.departure_time) < new Date()) {
-      redirect('/mis-viajes?toast=El+viaje+ya+expiró+y+no+puede+ser+pagado&toastType=error');
+      redirect(`/mis-viajes?toast=Error:+Viaje+Expirado&toastType=error#viaje-${id}`);
     }
 
     // Obtenemos el precio estimado real simulando consulta a la Payments App
@@ -154,7 +154,7 @@ export default async function MisViajesPage({
       } 
     })
     revalidatePath('/mis-viajes')
-    redirect('/mis-viajes?toast=Estado:+Abonado')
+    redirect(`/mis-viajes?toast=Pago+procesado+correctamente#viaje-${id}`)
   }
 
   // --- SERVER ACTIONS SIMULADAS (Dev Mode / Mocks) ---
@@ -164,16 +164,18 @@ export default async function MisViajesPage({
 
     const reservaCheck = await prisma.reservation.findUnique({ where: { id } })
     if (!reservaCheck || new Date(reservaCheck.departure_time) < new Date()) {
-      redirect('/mis-viajes?toast=El+viaje+ya+expiró+y+no+puede+ser+confirmado&toastType=error');
+      redirect(`/mis-viajes?toast=Error:+Viaje+Expirado&toastType=error#viaje-${id}`);
     }
 
     // Obtenemos los datos simulados de los otros microservicios
     const driverData = await getDriverAppAssignedDriverMock("pool_abc123");
+    const ratingData = await getFeedbackAppRatingMock(driverData.driver.driver_user_id);
     
     // Creamos el "snapshot" (foto inmutable) de la asignación, según el contrato
     const driverSnapshot: any = {
       driver_user_id: driverData.driver.driver_user_id,
       driver_name: driverData.driver.full_name,
+      driver_rating: ratingData.average_rating,
       vehicle: { ...driverData.vehicle }
     }
 
@@ -185,7 +187,7 @@ export default async function MisViajesPage({
       }
     })
     revalidatePath('/mis-viajes')
-    redirect('/mis-viajes?toast=Estado:+Confirmado')
+    redirect(`/mis-viajes?toast=Conductor+asignado#viaje-${id}`)
   }
 
   // --- SERVER ACTION: Limpiar notificaciones ---
@@ -356,7 +358,7 @@ export default async function MisViajesPage({
                       <div>
                     <h3 className="text-[14px] font-bold text-[#0A192F]">{((reserva.assigned_driver_snapshot as any)?.driver_name) || 'Conductor'}</h3>
                         <p className="text-[12px] font-bold text-[#F59E0B] flex items-center gap-0.5 mt-0.5">
-                          <span className="material-symbols-outlined text-[14px] fill-current">star</span> 4.8
+                          <span className="material-symbols-outlined text-[14px] fill-current">star</span> {((reserva.assigned_driver_snapshot as any)?.driver_rating) || 'N/A'}
                         </p>
                       </div>
                     </div>
@@ -448,7 +450,7 @@ export default async function MisViajesPage({
                     <h3 className="text-[16px] font-bold text-[#0A192F] mb-4 truncate">{reserva.destination.name}</h3>
                     
                     <div className="flex justify-between items-center pt-4 border-t border-[#D8DADC]">
-                      {reserva.reservation_status !== 'CANCELED' ? (
+                      {reserva.reservation_status === 'CONFIRMED' ? (
                         <Link href={`https://proyecto-a-feedback-weshuttle.vercel.app/reviews/new?pool_id=${reserva.pool_id}&reservation_id=${reserva.id}`} target="_blank" rel="noopener noreferrer" className="text-[12px] font-bold text-[#F59E0B] hover:underline flex items-center gap-1">
                           <span className="material-symbols-outlined text-[16px] fill-current">star</span> Calificar
                         </Link>

@@ -11,6 +11,16 @@ export default function DateTimeInputs({ minDate, maxDate, minTime, maxTime }: {
   const isTooLate = fecha === maxDate && hora > maxTime;
   const isError = isTooEarly || isTooLate;
 
+  // Convertir hora 24hs a 12hs (AM/PM) para mostrar mensajes 
+  const formatAMPM = (time24: string) => {
+    if (!time24) return '';
+    const [hStr, mStr] = time24.split(':');
+    let h = parseInt(hStr, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${mStr} ${ampm}`;
+  };
+
   return (
     <div className="grid grid-cols-2 gap-4 md:gap-6">
       <div className="w-full overflow-hidden">
@@ -41,11 +51,11 @@ export default function DateTimeInputs({ minDate, maxDate, minTime, maxTime }: {
         </div>
         
         {/* MENSAJES EN VIVO */}
-        {isTooEarly && <p className="text-[10px] text-[#DC2626] font-bold mt-1.5 leading-tight">Para hoy, debe ser después de las {minTime} hs.</p>}
-        {isTooLate && <p className="text-[10px] text-[#DC2626] font-bold mt-1.5 leading-tight">Para mañana, debe ser antes de las {maxTime} hs.</p>}
+        {isTooEarly && <p className="text-[10px] text-[#DC2626] font-bold mt-1.5 leading-tight">Para hoy, debe ser después de las {formatAMPM(minTime)}.</p>}
+        {isTooLate && <p className="text-[10px] text-[#DC2626] font-bold mt-1.5 leading-tight">Para mañana, debe ser antes de las {formatAMPM(maxTime)}.</p>}
         {!isError && (
           <p className="text-[10px] text-[#10B981] font-bold mt-1.5 leading-tight">
-            {fecha === minDate ? `Permitido desde las ${minTime} hs en adelante.` : `Permitido hasta las ${maxTime} hs.`}
+            {fecha === minDate ? `Permitido desde las ${formatAMPM(minTime)} en adelante.` : `Permitido hasta las ${formatAMPM(maxTime)}.`}
           </p>
         )}
       </div>

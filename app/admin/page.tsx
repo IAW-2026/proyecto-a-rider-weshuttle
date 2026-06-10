@@ -37,6 +37,30 @@ async function actualizarDestino(formData: FormData) {
   revalidatePath('/admin')
 }
 
+async function togglePassengerStatus(formData: FormData) {
+  'use server'
+
+  const { userId } = await auth()
+  const user = await currentUser()
+  const email = user?.emailAddresses[0]?.emailAddress?.toLowerCase() ?? '';
+  const adminEmails = (process.env.ADMIN_EMAIL ?? '').split(',').map((item) => item.trim().toLowerCase());
+
+  if (!email || !adminEmails.includes(email)) return;
+
+  const id = formData.get('id') as string;
+  const currentStatus = formData.get('currentStatus') as string;
+
+  if (!id || !currentStatus) return;
+
+  const newStatus = currentStatus === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED';
+
+  await prisma.passenger.update({
+    where: { id },
+    data: { status: newStatus }
+  });
+  revalidatePath('/admin');
+}
+
 export default async function GestionViajes({
   searchParams,
 }: {
@@ -219,6 +243,7 @@ export default async function GestionViajes({
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Nombre Completo</th>
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Teléfono</th>
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Estado</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569] text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#D8DADC]">
@@ -228,7 +253,24 @@ export default async function GestionViajes({
                         <td className="px-6 py-4 text-[14px] font-bold text-[#0A192F]">{p.full_name}</td>
                         <td className="px-6 py-4 text-[13px] text-[#475569]">{p.phone || 'N/A'}</td>
                         <td className="px-6 py-4">
-                          <span className="px-2.5 py-1 rounded-[6px] text-[10px] font-bold uppercase tracking-widest bg-[#10B981]/10 text-[#047857] border border-[#10B981]/20">Activo</span>
+                          <span className={`px-2.5 py-1 rounded-[6px] text-[10px] font-bold uppercase tracking-widest border ${
+                            p.status === 'BLOCKED' ? 'bg-[#EF4444]/10 text-[#B91C1C] border-[#EF4444]/20' :
+                            p.status === 'INACTIVE' ? 'bg-[#F59E0B]/10 text-[#B45309] border-[#F59E0B]/20' :
+                            'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20'
+                          }`}>
+                            {p.status === 'BLOCKED' ? 'Bloqueado' : p.status === 'INACTIVE' ? 'Inactivo' : 'Activo'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <form action={togglePassengerStatus}>
+                            <input type="hidden" name="id" value={p.id} />
+                            <input type="hidden" name="currentStatus" value={p.status} />
+                            <button type="submit" className={`px-4 py-2 rounded-[6px] text-[11px] font-bold uppercase tracking-widest transition-colors shadow-sm ${
+                              p.status === 'BLOCKED' ? 'text-[#10B981] hover:text-[#047857] bg-[#10B981]/10 hover:bg-[#10B981]/20' : 'text-[#EF4444] hover:text-[#B91C1C] bg-[#EF4444]/10 hover:bg-[#EF4444]/20'
+                            }`}>
+                              {p.status === 'BLOCKED' ? 'Desbloquear' : 'Bloquear'}
+                            </button>
+                          </form>
                         </td>
                       </tr>
                     ))}
