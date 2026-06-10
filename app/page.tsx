@@ -3,15 +3,14 @@ import Link from 'next/link'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { UserButton } from "@clerk/nextjs"
 import { revalidatePath } from 'next/cache'
+import { getPublicFleetMock } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
 export default async function VistaPublicaViajes() {
   // Obtenemos los viajes activos para el monitor de flota público
-  const viajes = await prisma.pool.findMany({
-    where: { estado: { in: ['Programado', 'En camino'] } },
-    orderBy: { id: 'desc' }
-  })
+  // (Mockeado temporalmente porque los Pools ahora se deben consultar por API a la Driver App)
+  const viajes = await getPublicFleetMock();
 
   // Verificamos si hay un usuario logueado
   const { userId } = await auth()
@@ -30,7 +29,7 @@ export default async function VistaPublicaViajes() {
   const proximoViaje = userId ? await prisma.reservation.findFirst({
     where: {
       passenger_user_id: userId,
-      status: { in: ['PENDING_DRIVER', 'CONFIRMED'] },
+      reservation_status: { in: ['PENDING_PAYMENT', 'PENDING_DRIVER', 'CONFIRMED'] },
       departure_time: { gte: ahora }
     },
     include: { destination: true },
@@ -39,7 +38,7 @@ export default async function VistaPublicaViajes() {
 
   // Contamos cuántos viajes completó el usuario
   const viajesRealizados = userId ? await prisma.reservation.count({
-    where: { passenger_user_id: userId, status: 'PAID' }
+    where: { passenger_user_id: userId, payment_status: 'PAID', reservation_status: { not: 'CANCELED' } }
   }) : 0;
 
   const emailName = user?.emailAddresses[0]?.emailAddress?.split('@')[0];

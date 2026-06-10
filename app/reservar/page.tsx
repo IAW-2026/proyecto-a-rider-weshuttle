@@ -2,7 +2,7 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { fetchPaymentsAppPricingMock, createDriverAppPoolMock } from '@/lib/api'
+import { fetchPaymentsAppPricingMock } from '@/lib/api'
 import { UserButton } from "@clerk/nextjs"
 import { revalidatePath } from 'next/cache'
 import AddressAutocomplete from './AddressAutocomplete'
@@ -12,12 +12,13 @@ export default async function NuevaReservaPage() {
   const { userId } = await auth()
   if (!userId) redirect('/sign-in')
 
-  // 2. Obtenemos datos necesarios para el formulario
-  const destinos = await prisma.destination.findMany({ where: { active: true } })
   const user = await currentUser()
   const userEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase() ?? '';
   const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map(e => e.trim().toLowerCase());
   const isAdmin = adminEmailsList.includes(userEmail);
+
+  // 2. Obtenemos datos necesarios para el formulario
+  const destinos = await prisma.destination.findMany({ where: { active: true } })
 
   const notificaciones = userId ? await prisma.passengerNotification.findMany({
     where: { passenger_user_id: userId, read_at: null },
@@ -41,19 +42,18 @@ export default async function NuevaReservaPage() {
     const actionUser = await currentUser()
     if (!actionUserId || !actionUser) return
 
-    // Regla de Negocio: Las reservas deben hacerse con al menos 2 horas de anticipación
+    // Regla de Negocio: La brecha horaria permitida es desde 24 horas hasta 1 hora antes de la partida.
     const fechaViaje = new Date(`${horario}-03:00`)
-    const fechaMinima = new Date(Date.now() + 2 * 60 * 60 * 1000 - 5 * 60 * 1000)
-    if (fechaViaje < fechaMinima) {
-      throw new Error("Error de negocio: Las reservas deben realizarse con al menos 2 horas de anticipación.")
+    const ahora = Date.now()
+    const unaHoraEnMs = 60 * 60 * 1000 - (5 * 60 * 1000) // 1h con 5 mins de margen
+    const veinticuatroHorasEnMs = 24 * 60 * 60 * 1000
+    if (fechaViaje.getTime() < ahora + unaHoraEnMs || fechaViaje.getTime() > ahora + veinticuatroHorasEnMs) {
+      throw new Error("Error de negocio: Las reservas deben realizarse entre 1 y 24 horas antes de la partida.")
     }
 
-    // Simulación de consulta a microservicios externos
-    const paymentsData = await fetchPaymentsAppPricingMock()
-    const driverData = await createDriverAppPoolMock()
-
     // Regla de Negocio: Verificar que haya asientos disponibles
-    if (driverData.current_passengers >= driverData.max_capacity) {
+    const asientosDisponibles = true; // Simulación
+    if (!asientosDisponibles) {
       throw new Error("Error de negocio: No hay asientos disponibles en la unidad para este horario y destino.")
     }
 
@@ -75,6 +75,9 @@ export default async function NuevaReservaPage() {
       console.error("Error obteniendo coordenadas:", error);
     }
 
+    // Simulación de consulta a microservicios externos para cotizar (enviamos lat, lng, destino y ocupación 0)
+    const paymentsData = await fetchPaymentsAppPricingMock(lat, lng, destino_id, 0)
+
     // Registramos al usuario en nuestra base de datos si es su primera vez
     const pasajeroDb = await prisma.passenger.upsert({
       where: { clerk_user_id: actionUserId },
@@ -82,10 +85,7 @@ export default async function NuevaReservaPage() {
       create: {
         clerk_user_id: actionUserId,
         full_name: actionUser?.firstName || 'Pasajero',
-        phone: "Sin registrar", // Fallback por el contrato
-        email: actionUser?.emailAddresses[0]?.emailAddress,
-        status: "ACTIVE",
-        rol: 'RIDER'
+        phone: "Sin registrar",
       }
     })
 
@@ -99,20 +99,23 @@ export default async function NuevaReservaPage() {
         pickup_address: punto_partida,
         pickup_lat: lat, // 🌟 Guardamos latitud real
         pickup_lng: lng, // 🌟 Guardamos longitud real
-        status: 'PENDING_DRIVER',
+        reservation_status: 'PENDING_PAYMENT',
+        payment_status: 'UNPAID',
         max_price: paymentsData.max_price,
         currency: paymentsData.currency || "ARS",
-        pool_id: driverData.pool_id
+        pool_id: null // Se asigna recién cuando se procesa el pago exitosamente
       }
     })
 
-    redirect('/mis-viajes?toast=Estado:+Buscando+Unidad')
+    redirect('/mis-viajes?toast=Estado:+Pago+Pendiente')
   }
 
-  // Calculamos la hora mínima permitida para el input date (ahora + 2hs)
+  // Calculamos la hora mínima y máxima permitida para el input date
   const ahoraUtc = new Date()
-  const minArgConMargen = new Date(ahoraUtc.getTime() - 3 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000) 
+  const minArgConMargen = new Date(ahoraUtc.getTime() - 3 * 60 * 60 * 1000 + 1 * 60 * 60 * 1000) 
   const minDateTime = minArgConMargen.toISOString().slice(0, 16)
+  const maxArgConMargen = new Date(ahoraUtc.getTime() - 3 * 60 * 60 * 1000 + 24 * 60 * 60 * 1000)
+  const maxDateTime = maxArgConMargen.toISOString().slice(0, 16)
 
   // --- SERVER ACTION: Limpiar notificaciones ---
   async function limpiarNotificaciones() {
@@ -213,7 +216,7 @@ export default async function NuevaReservaPage() {
                 <label htmlFor="horario" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Fecha y Horario de Partida</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">calendar_clock</span>
-                  <input type="datetime-local" id="horario" name="horario" min={minDateTime} defaultValue={minDateTime} required className="w-full appearance-none min-w-0 max-w-full h-[56px] pl-10 pr-2 md:pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
+                  <input type="datetime-local" id="horario" name="horario" min={minDateTime} max={maxDateTime} defaultValue={minDateTime} required className="w-full appearance-none min-w-0 max-w-full h-[56px] pl-10 pr-2 md:pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" />
                 </div>
               </div>
             </div>

@@ -22,6 +22,9 @@
 - `PENDING_DRIVER`: la reserva ya fue pagada, pero el pool todavía no tiene conductor asignado.
 - `CONFIRMED`: la reserva ya fue pagada y el pool tiene conductor asignado.
 - `CANCELED`: la reserva fue cancelada.
+- `CANCELED`: el checkout fue cancelado por el usuario.
+- `EXPIRED`: el checkout venció sin pago exitoso.
+
 
 #### Estados de pago de la reserva
 
@@ -339,7 +342,9 @@ Responsabilidades principales:
   - `UNPAID`: la reserva todavía no fue pagada.
   - `PENDING`: el pago fue iniciado pero todavía no fue confirmado.
   - `PAID`: el pago fue exitoso.
-  - `DENIED`: el pago fue rechazado
+  - `DENIED`: el pago fue rechazado.
+  - `CANCELED`: el checkout fue cancelado por el usuario.
+  - `EXPIRED`: el checkout vencio sin pago exitoso.
 - Guardar los datos principales de la reserva para mantener su inmutabilidad.
 - Crear reservas inicialmente en estado `PENDING_PAYMENT`.
 - Redirigir al pasajero a Payments App para pagar la reserva.
@@ -352,7 +357,7 @@ Responsabilidades principales:
 - Informar a la Driver App cuando una reserva se cancela.
 - Proveer el listado de pasajeros de un pool cuando otra app lo requiera.
 - Actualizar la reserva con el resultado del pago informado por Payments App.
-- Guardar el precio efectivo pagado para mostrarlo en el resumen e historial de viajes.
+- Guardar `amount_charged`, `credit_applied`, `final_trip_price` y `credit_granted` para mostrarlo en el resumen e historial de viajes.
 - Mostrar al pasajero el estado del viaje y la información disponible del conductor asignado.
 
 ---
@@ -1088,7 +1093,7 @@ GET /api/pools/pool_abc123/passengers?reservation_status=CONFIRMED&payment_statu
 - `reservation_status` representa el estado operativo de la reserva.
 - `payment_status` representa el estado del pago asociado a la reserva.
 - El filtro `payment_status=PAID` debe devolver únicamente reservas pagadas.
-- Las reservas con `payment_status = DENIED` no forman parte efectiva del pool.
+- Las reservas con `payment_status = DENIED`, `CANCELED` o `EXPIRED` no forman parte efectiva del pool.
 - La **Rider App** solo debe notificar a la **Driver App** que una reserva se suma al pool cuando el pago fue exitoso.
 - La **Payments App** utiliza este endpoint con `payment_status=PAID` para calcular ajustes de crédito.
 - La **Driver App** utiliza este endpoint con `payment_status=PAID` como manifiesto final operativo.
@@ -1163,17 +1168,27 @@ La **Rider App** debe actualizar las reservas asociadas al pool a estado `CANCEL
 
 ### Descripción
 
-Permite a la **Payments App** notificar a la **Rider App** el resultado del cobro de una reserva.
+- `payment_status = PAID`;
+- la reserva deja `PENDING_PAYMENT` y pasa a `PENDING_DRIVER` o `CONFIRMED`, segun si el pool ya tiene conductor asignado o no;
+- se guardan `max_price`, `credit_applied` y `amount_charged`.
 
-Si el pago fue exitoso:
+Si Mercado Pago rechaza el pago:
 
-- la reserva pasa a `PAID`;
-- se guarda el `effective_price`.
+- `payment_status = DENIED`;
+- `reservation_status` permanece en `PENDING_PAYMENT`;
+- la reserva puede reintentar el pago.
 
-Si el pago fue rechazado:
+Si el usuario cancela el checkout:
 
-- la reserva pasa a `DENIED`;
-- `effective_price` queda en `null`.
+- `payment_status = CANCELED`;
+- `reservation_status = CANCELED`.
+
+Si el checkout expira:
+
+- `payment_status = EXPIRED`;
+- `reservation_status = CANCELED`.
+
+En ninguno de los casos no exitosos la reserva forma parte efectiva del pool.
 
 ### Quién llama a quién
 
@@ -1213,6 +1228,28 @@ Si el pago fue rechazado:
 }
 ```
 
+### Request body para checkout cancelado por el usuario
+
+```json
+{
+  "payment_status": "CANCELED",
+  "transaction_id": "txn_345678",
+  "currency": "ARS",
+  "processed_at": "2026-06-10T07:00:00Z"
+}
+```
+
+### Request body para checkout expirado
+
+```json
+{
+  "payment_status": "EXPIRED",
+  "transaction_id": "txn_901234",
+  "currency": "ARS",
+  "processed_at": "2026-06-10T07:00:00Z"
+}
+```
+
 ### Response `200 OK` para pago exitoso
 
 ```json
@@ -1233,6 +1270,25 @@ Si el pago fue rechazado:
   "reservation_id": "res_101",
   "payment_status": "DENIED",
   "reservation_status": "PENDING_PAYMENT"
+}
+```
+### Response `200 OK` para checkout cancelado por el usuario
+
+```json
+{
+  "reservation_id": "res_101",
+  "payment_status": "CANCELED",
+  "reservation_status": "CANCELED"
+}
+```
+
+### Response `200 OK` para checkout expirado
+
+```json
+{
+  "reservation_id": "res_101",
+  "payment_status": "EXPIRED",
+  "reservation_status": "CANCELED"
 }
 ```
 
@@ -1291,7 +1347,7 @@ Permite a la **Feedback App** avisar a la **Rider App** que el pasajero ya puede
 
 # Payments App — Endpoints expuestos
 
-La **Payments App** expone endpoints relacionados con estimación de precios, cobros automáticos y liquidaciones.
+La **Payments App** expone endpoints relacionados con estimacion de precios, checkout de reservas, ajustes de credito y liquidaciones.
 
 ---
 
@@ -1431,7 +1487,9 @@ Luego, la **Payments App** devuelve una URL de pago para que la **Rider App** re
 - Si el saldo a favor cubre todo el precio máximo, `amount_to_charge` puede ser `0`.
 - Si `amount_to_charge = 0`, la **Payments App** puede marcar el pago como exitoso sin redirigir a Mercado Pago.
 - Si `amount_to_charge > 0`, la **Payments App** genera una instancia de pago y devuelve `payment_url`.
-- La reserva recién se considera pagada cuando la **Payments App** notifica a la **Rider App** mediante `PATCH /api/reservations/:reservation_id/payment-result`.
+- La reserva recien se considera pagada cuando la **Payments App** notifica a la **Rider App** mediante `PATCH /api/reservations/:reservation_id/payment-result` con `payment_status = PAID`.
+- Si el pago es rechazado, Rider App mantiene `reservation_status = PENDING_PAYMENT` y puede permitir reintento.
+- Si el usuario cancela el checkout o este expira, Rider App debe dejar `reservation_status = CANCELED`.
 
 ### Errores
 
@@ -2247,6 +2305,8 @@ UNPAID
 PENDING
 PAID
 DENIED
+CANCELED
+EXPIRED
 ```
 
 Estructura sugerida para `assigned_driver_snapshot`:
@@ -2550,7 +2610,8 @@ Notas:
 - `final_trip_price` se completa cuando se calculan los ajustes de crédito del pool.
 - `credit_granted` se completa cuando el precio final resulta menor que el precio máximo pagado.
 - El detalle de qué regla de descuento se usó se registra a nivel del proceso `pool_price_finalization_jobs`.
-- Si el pago falla, la Payments App notifica a Rider App mediante `PATCH /api/reservations/:reservation_id/payment-result`.
+- Si el pago es rechazado, la Payments App notifica a Rider App mediante `PATCH /api/reservations/:reservation_id/payment-result`, Rider App mantiene `reservation_status = PENDING_PAYMENT` y permite reintento.
+- Si el checkout es cancelado o expira, la Payments App lo informa mediante `PATCH /api/reservations/:reservation_id/payment-result` y Rider App pasa la reserva a `CANCELED`.
 - Si el pago falla, la reserva no debe formar parte efectiva del pool.
 ---
 

@@ -17,7 +17,7 @@ export async function POST(
 
     // Buscamos todas las reservas activas asociadas a esta combi
     const reservas = await prisma.reservation.findMany({
-      where: { pool_id: pool_id, status: { in: ['PENDING_DRIVER', 'CONFIRMED'] } }
+      where: { pool_id: pool_id, reservation_status: { in: ['PENDING_PAYMENT', 'PENDING_DRIVER', 'CONFIRMED'] } }
     });
 
     if (reservas.length === 0) {
@@ -26,8 +26,8 @@ export async function POST(
 
     // Pasamos todas esas reservas a estado CANCELED en bloque
     const actualizadas = await prisma.reservation.updateMany({
-      where: { pool_id: pool_id, status: { in: ['PENDING_DRIVER', 'CONFIRMED'] } },
-      data: { status: 'CANCELED' }
+      where: { pool_id: pool_id, reservation_status: { in: ['PENDING_PAYMENT', 'PENDING_DRIVER', 'CONFIRMED'] } },
+      data: { reservation_status: 'CANCELED' }
     });
 
     // Notificamos a los pasajeros afectados (Extraemos los IDs de usuario sin repetir)

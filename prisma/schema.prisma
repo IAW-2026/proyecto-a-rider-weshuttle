@@ -8,11 +8,19 @@ datasource db {
 
 // Enumerado de estados 
 enum ReservationStatus {
+  PENDING_PAYMENT
   PENDING_DRIVER
   CONFIRMED
+  CANCELED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING
   PAID
   DENIED
   CANCELED
+  EXPIRED
 }
 
 model Passenger {
@@ -22,10 +30,6 @@ model Passenger {
   phone         String
   company_code  String?
   status        String   @default("ACTIVE") // ACTIVE, INACTIVE, BLOCKED
-  
-  // Campos extra operativos (no estorban al modelo original)
-  email         String?  @unique
-  rol           String   @default("RIDER")
 
   reservations  Reservation[]
   notifications PassengerNotification[]
@@ -55,11 +59,15 @@ model Reservation {
   destination_id           String
   departure_time           DateTime
   pickup_address           String
-  pickup_lat               Float?
-  pickup_lng               Float?
-  status                   ReservationStatus @default(PENDING_DRIVER)
-  max_price                Float?
-  effective_price          Float?
+  pickup_lat               Float
+  pickup_lng               Float
+  reservation_status       ReservationStatus @default(PENDING_PAYMENT)
+  payment_status           PaymentStatus     @default(UNPAID)
+  max_price                Float
+  amount_charged           Float?
+  credit_applied           Float             @default(0)
+  final_trip_price         Float?
+  credit_granted           Float             @default(0)
   currency                 String   @default("ARS")
   payment_transaction_id   String?
   payment_rejection_reason String?
@@ -69,15 +77,6 @@ model Reservation {
   destination Destination @relation(fields: [destination_id], references: [id])
 
   @@map("reservations")
-}
-
-// Tabla temporal usada EXCLUSIVAMENTE para el simulador visual de Combis en la Home (fuera del contrato)
-model Pool {
-  id               String   @id @default(cuid())
-  conductor_nombre String
-  vehiculo_patente String
-  estado           String   @default("Programado")
-  fecha_viaje      DateTime @default(now())
 }
 
 model PassengerNotification {
