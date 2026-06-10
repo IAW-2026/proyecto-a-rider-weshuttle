@@ -140,27 +140,3 @@ export async function getFeedbackAppRatingMock(user_id: string) {
     total_reviews: 25
   };
 }
-
-/* =========================================================================
-   MOCKS DE UTILIDAD INTERNA DE LA UI (NO DEFINIDOS EN CONTRATO DIRECTO)
-   ========================================================================= */
-
-// Usado en app/page.tsx para mostrar las combis públicas en tiempo real
-export async function getPublicFleetMock() {
-  return [
-    {
-      id: "pool_mock_1",
-      conductor_nombre: "Juliana Pagani",
-      vehiculo_patente: "AF123JK",
-      estado: "En camino",
-      fecha_viaje: new Date(Date.now() - 15 * 60000)
-    },
-    {
-      id: "pool_mock_2",
-      conductor_nombre: "Marcos G.",
-      vehiculo_patente: "AB987XY",
-      estado: "Programado",
-      fecha_viaje: new Date(Date.now() + 45 * 60000)
-    }
-  ];
-}

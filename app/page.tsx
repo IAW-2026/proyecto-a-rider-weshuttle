@@ -3,15 +3,10 @@ import Link from 'next/link'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { UserButton } from "@clerk/nextjs"
 import { revalidatePath } from 'next/cache'
-import { getPublicFleetMock } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
 export default async function VistaPublicaViajes() {
-  // Obtenemos los viajes activos para el monitor de flota público
-  // (Mockeado temporalmente porque los Pools ahora se deben consultar por API a la Driver App)
-  const viajes = await getPublicFleetMock();
-
   // Verificamos si hay un usuario logueado
   const { userId } = await auth()
   const user = await currentUser()
@@ -188,71 +183,6 @@ export default async function VistaPublicaViajes() {
                 <h3 className="text-[28px] font-bold text-[#0A192F] leading-none">{viajesRealizados.toString().padStart(2, '0')}</h3>
               </div>
 
-            </div>
-          )}
-        </div>
-
-        {/* SECCIÓN: COMBIS EN REAL-TIME */}
-        <div className="mb-6 flex justify-between items-end relative">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-[20px] font-bold text-[#0A192F]">Combis en Real-Time</h2>
-              <div className="group cursor-help flex items-center sm:relative" tabIndex={0}>
-                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#D8DADC] text-[#0A192F] text-[10px] font-bold hover:bg-[#D8DADC]/80 transition-colors">?</span>
-                <div className="absolute top-[100%] left-0 right-0 sm:top-full sm:left-1/2 sm:right-auto sm:-translate-x-1/2 mt-2 hidden group-hover:block group-focus-within:block w-full sm:w-72 p-4 bg-[#0A192F] text-[#F7F9FB] text-[12px] font-normal rounded-lg shadow-2xl z-[100] leading-relaxed">
-                  Monitor de partidas para pasajeros. Permite identificar tu vehículo asignado y conocer el estado de la flota en tiempo real.
-                  <div className="hidden sm:block absolute sm:left-1/2 -translate-x-1/2 bottom-full border-4 border-transparent border-b-[#0A192F]"></div>
-                </div>
-              </div>
-            </div>
-            <p className="text-[14px] text-[#475569] mt-1">Monitor de flota activa</p>
-          </div>
-          <div className="flex items-center gap-2 bg-[#FFFFFF] border border-[#D8DADC] px-3 py-1.5 rounded-lg shadow-sm">
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10B981]"></span>
-            </span>
-            <span className="text-[10px] font-bold text-[#475569] uppercase tracking-widest">Live</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {viajes.map((viaje) => {
-            const iniciales = viaje.conductor_nombre.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'DR';
-            return (
-              <div key={viaje.id} className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg p-5 shadow-sm flex flex-col justify-between hover:border-[#0A192F]/40 transition-colors group">
-                <div className="flex justify-between items-start mb-5">
-                  <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${
-                  viaje.estado === 'En camino' ? 'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20' : 
-                    viaje.estado === 'Programado' ? 'bg-[#0A192F]/5 text-[#0A192F] border-[#0A192F]/10' : 
-                  viaje.estado === 'Cancelado' ? 'bg-[#EF4444]/10 text-[#DC2626] border-[#EF4444]/20' :
-                    'bg-[#F7F9FB] text-[#475569] border-[#D8DADC]'
-                  }`}>
-                    {viaje.estado}
-                  </span>
-                  <span className="text-[10px] font-mono font-semibold text-[#475569] bg-[#F7F9FB] border border-[#D8DADC] px-2 py-0.5 rounded">{viaje.vehiculo_patente}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-[#F7F9FB] border border-[#D8DADC] flex items-center justify-center text-[12px] font-bold text-[#0A192F] shrink-0 group-hover:bg-[#0A192F] group-hover:text-white transition-colors">
-                    {iniciales}
-                  </div>
-                  <div className="overflow-hidden">
-                    <h3 className="text-[16px] font-bold text-[#0A192F] truncate">{viaje.conductor_nombre}</h3>
-                    <p className="text-[12px] text-[#475569] flex items-center gap-1 mt-0.5 truncate">
-                      <span className="material-symbols-outlined text-[14px]">schedule</span> 
-                      {viaje.fecha_viaje ? new Date(viaje.fecha_viaje).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' hs' : 'Pronto'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-          
-          {viajes.length === 0 && (
-            <div className="col-span-full p-12 bg-[#FFFFFF] border border-[#D8DADC] border-dashed rounded-lg text-center">
-              <span className="material-symbols-outlined text-4xl text-[#D8DADC] mb-2 block">directions_bus</span>
-              <p className="text-[16px] font-bold text-[#0A192F]">No hay unidades activas</p>
-              <p className="text-[14px] text-[#475569] mt-1">La flota se encuentra en base por el momento.</p>
             </div>
           )}
         </div>
