@@ -14,17 +14,14 @@ export default async function NuevaReservaPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   // 1. Verificamos que el usuario esté autenticado
-  const { userId } = await auth()
+  const { userId, sessionClaims } = await auth()
   if (!userId) redirect('/sign-in')
 
   // Procesamos los query params para la pre-selección inteligente
   const params = await searchParams;
   const preselectedDestino = typeof params?.destino_id === 'string' ? params.destino_id : '';
 
-  const user = await currentUser()
-  const userEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase() ?? '';
-  const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map(e => e.trim().toLowerCase());
-  const isAdmin = adminEmailsList.includes(userEmail);
+  const isAdmin = sessionClaims?.role === 'admin';
 
   // 2. Obtenemos datos necesarios para el formulario
   const destinos = await prisma.destination.findMany({ where: { active: true } })
@@ -45,7 +42,7 @@ export default async function NuevaReservaPage({
     // Validación básica de los datos ingresados
     const tieneLetras = /[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(punto_partida || '');
     if (!destino_id || !fecha || !hora || !punto_partida || punto_partida.trim().length < 5 || !tieneLetras) {
-      redirect('/reservar?toast=Error:+Dirección+inválida&toastType=error');
+      redirect('/reservar?toast=Error:%20Direccion%20invalida&toastType=error');
     }
 
     const { userId: actionUserId } = await auth()
@@ -59,13 +56,13 @@ export default async function NuevaReservaPage({
     const unaHoraEnMs = 60 * 60 * 1000 - (5 * 60 * 1000) // 1h con 5 mins de margen
     const veinticuatroHorasEnMs = 24 * 60 * 60 * 1000
     if (fechaViaje.getTime() < ahora + unaHoraEnMs || fechaViaje.getTime() > ahora + veinticuatroHorasEnMs) {
-      redirect('/reservar?toast=Error:+Horario+inválido&toastType=error');
+      redirect('/reservar?toast=Error:%20Horario%20invalido&toastType=error');
     }
 
     // Regla de Negocio: Verificar que haya asientos disponibles
     const asientosDisponibles = true; // Simulación
     if (!asientosDisponibles) {
-      redirect('/reservar?toast=Error:+Sin+asientos+disponibles&toastType=error');
+      redirect('/reservar?toast=Error:%20Sin%20asientos%20disponibles&toastType=error');
     }
 
     // 🌟 NUEVO: Obtener coordenadas reales usando la API de OpenStreetMap (Geocoding)
@@ -102,7 +99,7 @@ export default async function NuevaReservaPage({
 
     // Regla de Negocio: Usuarios bloqueados no pueden crear nuevas reservas
     if (pasajeroDb.status === 'BLOCKED') {
-      redirect('/reservar?toast=Estado+Pasajero:+Bloqueado&toastType=error');
+      redirect('/reservar?toast=Estado%20Pasajero:%20Bloqueado&toastType=error');
     }
 
     // Creamos la reserva inmutable con los datos obtenidos
@@ -123,7 +120,7 @@ export default async function NuevaReservaPage({
       }
     })
 
-    redirect('/mis-viajes?toast=Reserva+creada+con+éxito')
+    redirect('/mis-viajes?toast=Reserva%20creada%20con%20exito')
   }
 
   // Calculamos la hora mínima y máxima permitida para el input date

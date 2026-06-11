@@ -1,4 +1,4 @@
-import { auth, currentUser } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
@@ -12,13 +12,11 @@ export const dynamic = 'force-dynamic'
 async function actualizarDestino(formData: FormData) {
   'use server'
 
-  const { userId } = await auth()
-  const user = await currentUser()
-  const email = user?.emailAddresses[0]?.emailAddress?.toLowerCase() ?? '';
-  const adminEmails = (process.env.ADMIN_EMAIL ?? '').split(',').map((item) => item.trim().toLowerCase());
+  const { userId, sessionClaims } = await auth()
 
-  if (!email || !adminEmails.includes(email)) {
-    throw new Error("Acceso denegado. Solo los administradores pueden modificar destinos.")
+  if (sessionClaims?.role !== 'admin') {
+    // Si falla la validación en el admin, simplemente cancelamos la acción en vez de romper la app
+    return;
   }
 
   const id = formData.get('id') as string
@@ -40,12 +38,9 @@ async function actualizarDestino(formData: FormData) {
 async function togglePassengerStatus(formData: FormData) {
   'use server'
 
-  const { userId } = await auth()
-  const user = await currentUser()
-  const email = user?.emailAddresses[0]?.emailAddress?.toLowerCase() ?? '';
-  const adminEmails = (process.env.ADMIN_EMAIL ?? '').split(',').map((item) => item.trim().toLowerCase());
+  const { userId, sessionClaims } = await auth()
 
-  if (!email || !adminEmails.includes(email)) return;
+  if (sessionClaims?.role !== 'admin') return;
 
   const id = formData.get('id') as string;
   const currentStatus = formData.get('currentStatus') as string;
@@ -66,12 +61,9 @@ export default async function GestionViajes({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  const { userId } = await auth()
-  const user = await currentUser()
-  const email = user?.emailAddresses[0]?.emailAddress?.toLowerCase() ?? '';
-  const adminEmails = (process.env.ADMIN_EMAIL ?? '').split(',').map(item => item.trim().toLowerCase());
+  const { userId, sessionClaims } = await auth()
   
-  if (!email || !adminEmails.includes(email)) redirect('/')
+  if (sessionClaims?.role !== 'admin') redirect('/')
 
   const params = await searchParams;
   const query = typeof params?.query === 'string' ? params.query : '';

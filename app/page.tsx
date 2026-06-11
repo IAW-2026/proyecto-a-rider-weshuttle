@@ -9,11 +9,9 @@ export const dynamic = 'force-dynamic'
 
 export default async function VistaPublicaViajes() {
   // Verificamos si hay un usuario logueado
-  const { userId } = await auth()
+  const { userId, sessionClaims } = await auth()
   const user = await currentUser()
-  const userEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase() ?? '';
-  const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map(e => e.trim().toLowerCase());
-  const isAdmin = adminEmailsList.includes(userEmail);
+  const isAdmin = sessionClaims?.role === 'admin';
 
   const notificaciones = userId ? await prisma.passengerNotification.findMany({
     where: { passenger_user_id: userId, read_at: null },

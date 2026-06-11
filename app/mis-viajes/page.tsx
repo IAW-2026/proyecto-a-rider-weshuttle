@@ -13,13 +13,10 @@ export default async function MisViajesPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  const { userId } = await auth()
+  const { userId, sessionClaims } = await auth()
   if (!userId) redirect('/sign-in')
 
-  const user = await currentUser()
-  const userEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase() ?? '';
-  const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map(e => e.trim().toLowerCase());
-  const isAdmin = adminEmailsList.includes(userEmail);
+  const isAdmin = sessionClaims?.role === 'admin';
 
   const notificaciones = await prisma.passengerNotification.findMany({
     where: { passenger_user_id: userId, read_at: null },
@@ -97,12 +94,12 @@ export default async function MisViajesPage({
     if (!reserva) return;
     
     if (new Date(reserva.departure_time) < new Date()) {
-      redirect(`/mis-viajes?toast=Error:+Viaje+Expirado&toastType=error#viaje-${id}`);
+      redirect(`/mis-viajes?toast=Error:%20Viaje%20Expirado&toastType=error#viaje-${id}`);
     }
 
     const isLocked = new Date(reserva.departure_time).getTime() - new Date().getTime() <= 60 * 60 * 1000;
     if (isLocked) {
-      redirect(`/mis-viajes?toast=Error:+Pool+Cerrado&toastType=error#viaje-${id}`);
+      redirect(`/mis-viajes?toast=Error:%20Pool%20Cerrado&toastType=error#viaje-${id}`);
     }
 
     // Avisamos a la Driver App que liberamos el asiento
@@ -116,7 +113,7 @@ export default async function MisViajesPage({
       data: { reservation_status: 'CANCELED' }
     })
     revalidatePath('/mis-viajes')
-    redirect(`/mis-viajes?toast=Viaje+cancelado&toastType=error#viaje-${id}`)
+    redirect(`/mis-viajes?toast=Viaje%20cancelado&toastType=error#viaje-${id}`)
   }
 
   async function simularPago(formData: FormData) {
@@ -125,7 +122,7 @@ export default async function MisViajesPage({
     
     const reservaCheck = await prisma.reservation.findUnique({ where: { id } })
     if (!reservaCheck || new Date(reservaCheck.departure_time) < new Date()) {
-      redirect(`/mis-viajes?toast=Error:+Viaje+Expirado&toastType=error#viaje-${id}`);
+      redirect(`/mis-viajes?toast=Error:%20Viaje%20Expirado&toastType=error#viaje-${id}`);
     }
 
     // Obtenemos el precio estimado real simulando consulta a la Payments App
@@ -154,7 +151,7 @@ export default async function MisViajesPage({
       } 
     })
     revalidatePath('/mis-viajes')
-    redirect(`/mis-viajes?toast=Pago+procesado+correctamente#viaje-${id}`)
+    redirect(`/mis-viajes?toast=Pago%20procesado%20correctamente#viaje-${id}`)
   }
 
   // --- SERVER ACTIONS SIMULADAS (Dev Mode / Mocks) ---
@@ -164,7 +161,7 @@ export default async function MisViajesPage({
 
     const reservaCheck = await prisma.reservation.findUnique({ where: { id } })
     if (!reservaCheck || new Date(reservaCheck.departure_time) < new Date()) {
-      redirect(`/mis-viajes?toast=Error:+Viaje+Expirado&toastType=error#viaje-${id}`);
+      redirect(`/mis-viajes?toast=Error:%20Viaje%20Expirado&toastType=error#viaje-${id}`);
     }
 
     // Obtenemos los datos simulados de los otros microservicios
@@ -187,7 +184,7 @@ export default async function MisViajesPage({
       }
     })
     revalidatePath('/mis-viajes')
-    redirect(`/mis-viajes?toast=Conductor+asignado#viaje-${id}`)
+    redirect(`/mis-viajes?toast=Conductor%20asignado#viaje-${id}`)
   }
 
   // --- SERVER ACTION: Limpiar notificaciones ---
