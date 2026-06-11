@@ -1,9 +1,8 @@
-import { auth, currentUser } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
-import { getDriverAppAssignedDriverMock } from '@/lib/api'
 import { UserButton } from "@clerk/nextjs"
 
 export const dynamic = 'force-dynamic'
@@ -13,12 +12,11 @@ export const dynamic = 'force-dynamic'
 async function actualizarDestino(formData: FormData) {
   'use server'
 
-  const { userId } = await auth()
-  const user = await currentUser()
-  const email = user?.emailAddresses[0]?.emailAddress?.toLowerCase()
-  const adminEmails = (process.env.ADMIN_EMAIL ?? '').split(',').map((item) => item.trim().toLowerCase())
-  if (!userId || !email || !adminEmails.includes(email)) {
-    throw new Error("Acceso denegado. Solo los administradores pueden modificar destinos.")
+  const { userId, sessionClaims } = await auth()
+
+  if (sessionClaims?.role !== 'admin') {
+    // Si falla la validación en el admin, simplemente cancelamos la acción en vez de romper la app
+    return;
   }
 
   const id = formData.get('id') as string
@@ -26,72 +24,36 @@ async function actualizarDestino(formData: FormData) {
   const ubicacion_lat_long = formData.get('ubicacion') as string
 
   if (!id || !nombre || !ubicacion_lat_long || nombre.trim().length < 3) {
-    throw new Error("Datos inválidos. El nombre del destino y su ubicación son obligatorios.")
+    // Si falla la validación en el admin, simplemente cancelamos la acción en vez de romper la app
+    return;
   }
 
   await prisma.destination.update({
     where: { id },
-    data: { name: nombre, address: ubicacion_lat_long, lat: 0, lng: 0 }
+    data: { name: nombre, address: ubicacion_lat_long }
   })
   revalidatePath('/admin')
 }
 
-async function crearViajeAPI() {
+async function togglePassengerStatus(formData: FormData) {
   'use server'
-  
-  const { userId: actionUserId } = await auth()
-  const actionUser = await currentUser()
-  const actionEmail = actionUser?.emailAddresses[0]?.emailAddress?.toLowerCase()
-  const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map((item) => item.trim().toLowerCase())
-  if (!actionUserId || !actionEmail || !adminEmailsList.includes(actionEmail)) return
 
-  const data = await getDriverAppAssignedDriverMock("pool_mock_123");
+  const { userId, sessionClaims } = await auth()
 
-  await prisma.pool.create({
-    data: {
-      conductor_nombre: data.driver.full_name,
-      vehiculo_patente: `${data.vehicle.model} - ${data.vehicle.license_plate}`,
-      estado: 'Programado'
-    }
-  })
-  revalidatePath('/admin') 
-}
+  if (sessionClaims?.role !== 'admin') return;
 
-async function actualizarEstado(formData: FormData) {
-  'use server'
-  
-  const { userId: actionUserId } = await auth()
-  const actionUser = await currentUser()
-  const actionEmail = actionUser?.emailAddresses[0]?.emailAddress?.toLowerCase()
-  const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map((item) => item.trim().toLowerCase())
-  if (!actionUserId || !actionEmail || !adminEmailsList.includes(actionEmail)) return
+  const id = formData.get('id') as string;
+  const currentStatus = formData.get('currentStatus') as string;
 
-  const id = formData.get('id') as string
-  const estado = formData.get('estado') as string
-  
-  await prisma.pool.update({
+  if (!id || !currentStatus) return;
+
+  const newStatus = currentStatus === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED';
+
+  await prisma.passenger.update({
     where: { id },
-    data: { estado }
-  })
-  revalidatePath('/admin')
-}
-
-async function cancelarViaje(formData: FormData) {
-  'use server'
-  
-  const { userId: actionUserId } = await auth()
-  const actionUser = await currentUser()
-  const actionEmail = actionUser?.emailAddresses[0]?.emailAddress?.toLowerCase()
-  const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map((item) => item.trim().toLowerCase())
-  if (!actionUserId || !actionEmail || !adminEmailsList.includes(actionEmail)) return
-
-  const id = formData.get('id') as string
-  
-  await prisma.pool.update({
-    where: { id },
-    data: { estado: 'Cancelado' }
-  })
-  revalidatePath('/admin')
+    data: { status: newStatus }
+  });
+  revalidatePath('/admin');
 }
 
 export default async function GestionViajes({
@@ -99,35 +61,34 @@ export default async function GestionViajes({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  const { userId } = await auth()
-  const user = await currentUser()
-
-  const email = user?.emailAddresses[0]?.emailAddress?.toLowerCase()
-  const adminEmails = (process.env.ADMIN_EMAIL ?? '').split(',').map(item => item.trim().toLowerCase())
-  if (!email || !adminEmails.includes(email)) redirect('/')
+  const { userId, sessionClaims } = await auth()
+  
+  if (sessionClaims?.role !== 'admin') redirect('/')
 
   const params = await searchParams;
   const query = typeof params?.query === 'string' ? params.query : '';
-  const tab = typeof params?.tab === 'string' ? params.tab : 'logistica'; // Leemos la pestaña
+  const tab = typeof params?.tab === 'string' ? params.tab : 'destinos';
 
-  // TRAEMOS SOLO LA DATA DE LA PESTAÑA ACTIVA PARA QUE SEA RÁPIDO
-  const destinos = tab === 'destinos' ? await prisma.destination.findMany({
-    where: { name: { contains: query, mode: 'insensitive' } },
-    orderBy: { name: 'asc' }
-  }) : [];
+  // Traemos solo la data de la pestaña activa para no sobrecargar la base de datos
+  let destinos: any[] = [];
+  let pasajeros: any[] = [];
+  let reservas: any[] = [];
 
-  const viajes = tab !== 'destinos' ? await prisma.pool.findMany({
-    where: { estado: { contains: query, mode: 'insensitive' } },
-    orderBy: { id: 'desc' }
-  }) : [];
-
-  let statTotal = 0, statEnRuta = 0, statPendientes = 0, statCancelados = 0;
-  if (tab !== 'destinos') {
-    const todosLosViajes = await prisma.pool.findMany();
-    statTotal = todosLosViajes.length;
-    statEnRuta = todosLosViajes.filter(v => v.estado === 'En camino').length;
-    statPendientes = todosLosViajes.filter(v => v.estado === 'Programado').length;
-    statCancelados = todosLosViajes.filter(v => v.estado === 'Cancelado').length;
+  if (tab === 'destinos') {
+    destinos = await prisma.destination.findMany({
+      where: { name: { contains: query, mode: 'insensitive' } },
+      orderBy: { name: 'asc' }
+    });
+  } else if (tab === 'pasajeros') {
+    pasajeros = await prisma.passenger.findMany({
+      where: { full_name: { contains: query, mode: 'insensitive' } }
+    });
+  } else if (tab === 'reservas') {
+    reservas = await prisma.reservation.findMany({
+      include: { passenger: true, destination: true },
+      orderBy: { departure_time: 'desc' },
+      take: 50 // Traemos las últimas 50 para que no explote si hay miles
+    });
   }
 
   return (
@@ -141,11 +102,14 @@ export default async function GestionViajes({
           </div>
           <nav className="p-4 flex flex-col gap-2">
             <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] mb-2 px-2 mt-2">Menú Principal</p>
-            <Link href="/admin?tab=logistica" className={`flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[13px] font-bold transition-all ${tab !== 'destinos' ? 'bg-[#0A192F] text-[#FFFFFF] shadow-sm' : 'text-[#475569] hover:text-[#0A192F] hover:bg-[#F7F9FB]'}`}>
-              <span className="material-symbols-outlined text-[20px]">local_shipping</span> Logística (CRUD)
-            </Link>
             <Link href="/admin?tab=destinos" className={`flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[13px] font-bold transition-all ${tab === 'destinos' ? 'bg-[#0A192F] text-[#FFFFFF] shadow-sm' : 'text-[#475569] hover:text-[#0A192F] hover:bg-[#F7F9FB]'}`}>
               <span className="material-symbols-outlined text-[20px]">map</span> Gestión Destinos
+            </Link>
+            <Link href="/admin?tab=pasajeros" className={`flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[13px] font-bold transition-all ${tab === 'pasajeros' ? 'bg-[#0A192F] text-[#FFFFFF] shadow-sm' : 'text-[#475569] hover:text-[#0A192F] hover:bg-[#F7F9FB]'}`}>
+              <span className="material-symbols-outlined text-[20px]">groups</span> Base de Pasajeros
+            </Link>
+            <Link href="/admin?tab=reservas" className={`flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[13px] font-bold transition-all ${tab === 'reservas' ? 'bg-[#0A192F] text-[#FFFFFF] shadow-sm' : 'text-[#475569] hover:text-[#0A192F] hover:bg-[#F7F9FB]'}`}>
+              <span className="material-symbols-outlined text-[20px]">receipt_long</span> Monitor Reservas
             </Link>
           </nav>
         </div>
@@ -173,16 +137,19 @@ export default async function GestionViajes({
         </div>
 
         {/* MENÚ MÓVIL (Pestañas) - Solo visible en pantallas pequeñas */}
-        <div className="lg:hidden flex gap-2 mb-8 bg-[#FFFFFF] p-1.5 rounded-[10px] border border-[#D8DADC] shadow-sm">
-          <Link href="/admin?tab=logistica" className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-bold rounded-[6px] transition-all ${tab !== 'destinos' ? 'bg-[#0A192F] text-white shadow-sm' : 'text-[#475569] hover:text-[#0A192F] hover:bg-[#F7F9FB]'}`}>
-            <span className="material-symbols-outlined text-[16px]">local_shipping</span> Logística
-          </Link>
+        <div className="lg:hidden flex flex-wrap gap-2 mb-8 bg-[#FFFFFF] p-1.5 rounded-[10px] border border-[#D8DADC] shadow-sm">
           <Link href="/admin?tab=destinos" className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-bold rounded-[6px] transition-all ${tab === 'destinos' ? 'bg-[#0A192F] text-white shadow-sm' : 'text-[#475569] hover:text-[#0A192F] hover:bg-[#F7F9FB]'}`}>
             <span className="material-symbols-outlined text-[16px]">map</span> Destinos
           </Link>
+          <Link href="/admin?tab=pasajeros" className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-bold rounded-[6px] transition-all ${tab === 'pasajeros' ? 'bg-[#0A192F] text-white shadow-sm' : 'text-[#475569] hover:text-[#0A192F] hover:bg-[#F7F9FB]'}`}>
+            <span className="material-symbols-outlined text-[16px]">groups</span> Pasajeros
+          </Link>
+          <Link href="/admin?tab=reservas" className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] font-bold rounded-[6px] transition-all ${tab === 'reservas' ? 'bg-[#0A192F] text-white shadow-sm' : 'text-[#475569] hover:text-[#0A192F] hover:bg-[#F7F9FB]'}`}>
+            <span className="material-symbols-outlined text-[16px]">receipt_long</span> Reservas
+          </Link>
         </div>
 
-        {tab === 'destinos' ? (
+        {tab === 'destinos' && (
           <>
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
               <div>
@@ -240,177 +207,145 @@ export default async function GestionViajes({
                         </td>
                       </tr>
                     ))}
-                    {destinos.length === 0 && (
-                      <tr>
-                        <td colSpan={3} className="p-12 text-center">
-                          <span className="material-symbols-outlined text-4xl text-[#D8DADC] mb-2 block">wrong_location</span>
-                          <p className="text-[#475569] text-[14px]">No se encontraron destinos cargados en la base de datos.</p>
-                        </td>
-                      </tr>
-                    )}
                   </tbody>
                 </table>
               </div>
             </div>
           </>
-        ) : (
+        )}
+
+        {tab === 'pasajeros' && (
           <>
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-[32px] font-bold text-[#0A192F] tracking-tight">Monitoreo de Flota</h2>
-                  <div className="relative group cursor-help flex items-center mt-2" tabIndex={0}>
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#D8DADC] text-[#0A192F] text-[11px] font-bold hover:bg-[#D8DADC]/80 transition-colors">?</span>
-                    <div className="absolute top-full left-0 sm:left-1/2 sm:-translate-x-1/2 mt-2 hidden group-hover:block group-focus-within:block w-64 sm:w-72 p-4 bg-[#0A192F] text-[#D8DADC] text-[12px] font-normal rounded-lg shadow-2xl z-[100] leading-relaxed">
-                      <p className="mb-2"><strong className="text-white tracking-wide">TOTAL:</strong> Suma absoluta de todos los viajes en el sistema.</p>
-                      <p className="mb-2"><strong className="text-white tracking-wide">EN RUTA:</strong> Unidades despachadas ("En camino").</p>
-                      <p className="mb-2"><strong className="text-white tracking-wide">PENDIENTES:</strong> Viajes programados esperando salida.</p>
-                      <p><strong className="text-white tracking-wide">CANCELADOS:</strong> Viajes anulados por el usuario o el sistema.</p>
-                      <div className="hidden sm:block absolute sm:left-1/2 -translate-x-1/2 bottom-full border-4 border-transparent border-b-[#0A192F]"></div>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-[#475569] text-[16px] mt-1">Gestión operativa y asignación de viajes en tiempo real.</p>
+                <h2 className="text-[32px] font-bold text-[#0A192F] tracking-tight">Directorio de Pasajeros</h2>
+                <p className="text-[#475569] text-[16px] mt-1">Listado de usuarios registrados en la plataforma.</p>
               </div>
             </header>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="bg-[#FFFFFF] p-5 rounded-[12px] border border-[#D8DADC] shadow-sm relative overflow-hidden group hover:border-[#0A192F]/30 transition-colors">
-                <span className="material-symbols-outlined absolute top-5 right-5 text-[#475569] opacity-10 text-[48px] group-hover:scale-110 transition-transform">dataset</span>
-                <p className="text-[11px] font-bold text-[#475569] uppercase tracking-widest mb-2">Total Registrados</p>
-                <h3 className="text-[32px] font-black text-[#0A192F] leading-none mb-2">{statTotal.toString().padStart(2, '0')}</h3>
+            <div className="bg-[#FFFFFF] rounded-[12px] border border-[#D8DADC] shadow-sm flex flex-col overflow-hidden mb-12">
+              <div className="p-6 border-b border-[#D8DADC] bg-[#F7F9FB]">
+                <h3 className="text-[16px] font-bold text-[#0A192F]">Usuarios</h3>
               </div>
-              <div className="bg-[#FFFFFF] p-5 rounded-[12px] border border-[#D8DADC] shadow-sm relative overflow-hidden group hover:border-[#0A192F]/30 transition-colors">
-                <span className="material-symbols-outlined absolute top-5 right-5 text-[#475569] opacity-10 text-[48px] group-hover:scale-110 transition-transform">route</span>
-                <p className="text-[11px] font-bold text-[#475569] uppercase tracking-widest mb-2">En Ruta</p>
-                <h3 className="text-[32px] font-black text-[#0A192F] leading-none mb-2">{statEnRuta.toString().padStart(2, '0')}</h3>
-              </div>
-              <div className="bg-[#FFFFFF] p-5 rounded-[12px] border border-[#D8DADC] shadow-sm relative overflow-hidden group hover:border-[#0A192F]/30 transition-colors">
-                <span className="material-symbols-outlined absolute top-5 right-5 text-[#475569] opacity-10 text-[48px] group-hover:scale-110 transition-transform">event_available</span>
-                <p className="text-[11px] font-bold text-[#475569] uppercase tracking-widest mb-2">Pendientes</p>
-                <h3 className="text-[32px] font-black text-[#0A192F] leading-none mb-2">{statPendientes.toString().padStart(2, '0')}</h3>
-              </div>
-              <div className="bg-[#FFFFFF] p-5 rounded-[12px] border border-[#D8DADC] shadow-sm relative overflow-hidden group hover:border-[#0A192F]/30 transition-colors">
-                <span className="material-symbols-outlined absolute top-5 right-5 text-[#475569] opacity-10 text-[48px] group-hover:scale-110 transition-transform">cancel</span>
-                <p className="text-[11px] font-bold text-[#475569] uppercase tracking-widest mb-2">Cancelados</p>
-                <h3 className="text-[32px] font-black text-[#0A192F] leading-none mb-2">{statCancelados.toString().padStart(2, '0')}</h3>
-              </div>
-            </div>
-
-            <div className="bg-[#FFFFFF] rounded-[12px] border border-[#D8DADC] shadow-sm p-6 mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="material-symbols-outlined text-[#0A192F]">assignment_add</span>
-                  <h3 className="text-[18px] font-bold text-[#0A192F]">Asignar Nuevo Viaje (API Mock)</h3>
-                </div>
-                <p className="text-[14px] text-[#475569]">
-                  Este panel simula la creación y asignación automática consumiendo la API de la <b>Driver App</b>.
-                </p>
-              </div>
-              <form action={crearViajeAPI} className="w-full md:w-auto shrink-0">
-                <button type="submit" className="w-full bg-[#0A192F] text-white px-8 py-3.5 rounded-[8px] text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-all shadow-sm flex items-center justify-center gap-2">
-                  Confirmar y Notificar <span className="material-symbols-outlined text-[18px]">send</span>
-                </button>
-              </form>
-            </div>
-              
-           <div className="bg-[#FFFFFF] rounded-[12px] border border-[#D8DADC] shadow-sm flex flex-col overflow-hidden mb-12">
-              <div className="p-6 border-b border-[#D8DADC] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#F7F9FB]">
-                <h3 className="text-[16px] font-bold text-[#0A192F]">Viajes Activos</h3>
-                <form method="GET" className="flex gap-2 w-full sm:w-auto">
-                  <input type="hidden" name="tab" value="logistica" />
-                  <div className="relative flex-1 sm:w-56">
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569] text-[18px]">search</span>
-                    <input type="text" name="query" defaultValue={query} placeholder="Buscar estado..." className="w-full pl-9 pr-3 py-2 border border-[#D8DADC] rounded-[6px] text-[12px] focus:outline-none focus:border-[#0A192F] text-[#0A192F]" />
-                  </div>
-                  <button type="submit" className="bg-[#0A192F] text-white px-4 py-2 rounded-[6px] text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors">Filtrar</button>
-                  {query && (
-                    <Link href="/admin?tab=logistica" className="bg-[#EF4444]/10 text-[#DC2626] border border-[#EF4444]/20 px-3 py-2 rounded-[6px] text-[12px] font-bold uppercase tracking-widest hover:bg-[#EF4444]/20 transition-colors flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[16px]">close</span>
-                    </Link>
-                  )}
-                </form>
-             </div>
-
-             <div className="overflow-x-auto">
-               <table className="w-full text-left min-w-[700px]">
-                 <thead>
-                   <tr className="bg-[#FFFFFF] border-b border-[#D8DADC]">
-                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Viaje / Conductor</th>
-                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Horario</th>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left min-w-[700px]">
+                  <thead>
+                    <tr className="bg-[#FFFFFF] border-b border-[#D8DADC]">
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Usuario (Clerk ID)</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Nombre Completo</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Teléfono</th>
                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Estado</th>
-                     <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569] text-right">Acciones</th>
-                   </tr>
-                 </thead>
-                 <tbody className="divide-y divide-[#D8DADC]">
-                    {viajes.map((viaje) => {
-                      const iniciales = viaje.conductor_nombre.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'DR';
-                      return (
-                        <tr key={viaje.id} className="hover:bg-[#F7F9FB] transition-colors">
-                         <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-full bg-[#F7F9FB] border border-[#D8DADC] flex items-center justify-center text-[12px] font-bold text-[#0A192F] shrink-0">
-                                {iniciales}
-                              </div>
-                              <div>
-                                <p className="font-bold text-[14px] text-[#0A192F] leading-tight">{viaje.conductor_nombre}</p>
-                                <p className="text-[11px] text-[#475569] font-mono mt-0.5">{viaje.vehiculo_patente}</p>
-                              </div>
-                            </div>
-                         </td>
-                         <td className="px-6 py-4">
-                            <span className="text-[13px] font-medium text-[#475569]">
-                              {viaje.fecha_viaje ? new Date(viaje.fecha_viaje).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' hs' : 'En breve'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <form action={actualizarEstado} className="flex items-center gap-2">
-                              <input type="hidden" name="id" value={viaje.id} />
-                              <select 
-                                key={viaje.estado}
-                                name="estado" 
-                                defaultValue={viaje.estado} 
-                                className={`p-1.5 rounded-[6px] border text-[11px] font-bold uppercase tracking-widest outline-none cursor-pointer ${
-                              viaje.estado === 'En camino' ? 'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20' : 
-                                  viaje.estado === 'Programado' ? 'bg-[#0A192F]/5 text-[#0A192F] border-[#0A192F]/10' : 
-                              viaje.estado === 'Cancelado' ? 'bg-[#EF4444]/10 text-[#DC2626] border-[#EF4444]/20' :
-                                  'bg-[#F7F9FB] text-[#475569] border-[#D8DADC]'
-                                }`}
-                              >
-                                <option value="Programado">Programado</option>
-                                <option value="En camino">En camino</option>
-                                <option value="Finalizado">Finalizado</option>
-                              </select>
-                              <button type="submit" className="text-[#3B82F6] hover:text-[#2563EB] p-1 rounded hover:bg-[#EFF6FF] transition-colors" title="Actualizar Estado">
-                                <span className="material-symbols-outlined text-[18px]">sync</span>
-                              </button>
-                            </form>
-                         </td>
-                         <td className="px-6 py-4 text-right">
-                            <form action={cancelarViaje}>
-                              <input type="hidden" name="id" value={viaje.id} />
-                              <button type="submit" disabled={viaje.estado === 'Cancelado'} className="text-[#EF4444] hover:text-[#DC2626] disabled:opacity-30 disabled:cursor-not-allowed p-2 rounded-full hover:bg-[#FEF2F2] transition-colors" title="Cancelar Viaje">
-                                <span className="material-symbols-outlined text-[20px]">cancel</span>
-                              </button>
-                            </form>
-                         </td>
-                       </tr>
-                      )
-                    })}
-                    {viajes.length === 0 && (
-                     <tr>
-                        <td colSpan={4} className="p-12 text-center">
-                          <span className="material-symbols-outlined text-4xl text-[#D8DADC] mb-2 block">folder_open</span>
-                          <p className="text-[#475569] text-[14px]">No hay viajes registrados en el sistema.</p>
-                       </td>
-                     </tr>
-                   )}
-                 </tbody>
-               </table>
-             </div>
-           </div>
-        </>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569] text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#D8DADC]">
+                    {pasajeros.map((p) => (
+                      <tr key={p.id} className="hover:bg-[#F7F9FB] transition-colors">
+                        <td className="px-6 py-4 text-[12px] font-mono text-[#475569]">{p.clerk_user_id}</td>
+                        <td className="px-6 py-4 text-[14px] font-bold text-[#0A192F]">{p.full_name}</td>
+                        <td className="px-6 py-4 text-[13px] text-[#475569]">{p.phone || 'N/A'}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded-[6px] text-[10px] font-bold uppercase tracking-widest border ${
+                            p.status === 'BLOCKED' ? 'bg-[#EF4444]/10 text-[#B91C1C] border-[#EF4444]/20' :
+                            p.status === 'INACTIVE' ? 'bg-[#F59E0B]/10 text-[#B45309] border-[#F59E0B]/20' :
+                            'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20'
+                          }`}>
+                            {p.status === 'BLOCKED' ? 'Bloqueado' : p.status === 'INACTIVE' ? 'Inactivo' : 'Activo'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <form action={togglePassengerStatus}>
+                            <input type="hidden" name="id" value={p.id} />
+                            <input type="hidden" name="currentStatus" value={p.status} />
+                            <button type="submit" className={`px-4 py-2 rounded-[6px] text-[11px] font-bold uppercase tracking-widest transition-colors shadow-sm ${
+                              p.status === 'BLOCKED' ? 'text-[#10B981] hover:text-[#047857] bg-[#10B981]/10 hover:bg-[#10B981]/20' : 'text-[#EF4444] hover:text-[#B91C1C] bg-[#EF4444]/10 hover:bg-[#EF4444]/20'
+                            }`}>
+                              {p.status === 'BLOCKED' ? 'Desbloquear' : 'Bloquear'}
+                            </button>
+                          </form>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
+
+        {tab === 'reservas' && (
+          <>
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+              <div>
+                <h2 className="text-[32px] font-bold text-[#0A192F] tracking-tight">Monitor Global de Reservas</h2>
+                <p className="text-[#475569] text-[16px] mt-1">Trazabilidad en tiempo real de todas las solicitudes de viaje.</p>
+              </div>
+            </header>
+
+            <div className="bg-[#FFFFFF] rounded-[12px] border border-[#D8DADC] shadow-sm flex flex-col overflow-hidden mb-12">
+              <div className="p-6 border-b border-[#D8DADC] bg-[#F7F9FB]">
+                <h3 className="text-[16px] font-bold text-[#0A192F]">Últimas 50 transacciones</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left min-w-[900px]">
+                  <thead>
+                    <tr className="bg-[#FFFFFF] border-b border-[#D8DADC]">
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Reserva ID</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Pasajero / Ruta</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Horario</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569]">Tarifa / Estado</th>
+                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-[#475569] text-right">Pool ID</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#D8DADC]">
+                    {reservas.map((r) => (
+                      <tr key={r.id} className="hover:bg-[#F7F9FB] transition-colors">
+                        <td className="px-6 py-4 text-[12px] font-mono text-[#475569]">{r.id.split('-')[0]}</td>
+                        <td className="px-6 py-4">
+                          <p className="text-[13px] font-bold text-[#0A192F]">{r.passenger?.full_name || 'Desconocido'}</p>
+                          <p className="text-[11px] text-[#475569] truncate max-w-[250px]" title={`${r.pickup_address} → ${r.destination?.name}`}>
+                            {r.pickup_address} <span className="mx-1">→</span> {r.destination?.name || 'Destino'}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4 text-[13px] font-medium text-[#475569]">
+                          {new Date(r.departure_time).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} hs
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className={`text-[13px] font-bold ${r.reservation_status === 'CANCELED' || r.payment_status !== 'PAID' ? 'text-[#475569] line-through decoration-[#EF4444] opacity-70' : 'text-[#0A192F]'}`}>
+                              ${(r.payment_status === 'PAID' ? (r.amount_charged ?? r.max_price) : (r.max_price ?? 0))?.toLocaleString('es-AR')}
+                            </span>
+                            <div className="flex gap-1 mt-0.5">
+                              <span className={`px-2 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-widest border ${
+                                r.reservation_status === 'CANCELED' ? 'bg-[#EF4444]/10 text-[#B91C1C] border-[#EF4444]/20' :
+                                r.reservation_status === 'PENDING_DRIVER' ? 'bg-[#F59E0B]/10 text-[#B45309] border-[#F59E0B]/20' :
+                                r.reservation_status === 'CONFIRMED' ? 'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20' :
+                                'bg-[#F7F9FB] text-[#475569] border-[#D8DADC]'
+                              }`}>
+                                OP: {r.reservation_status}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-widest border ${
+                                r.payment_status === 'PAID' ? 'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20' : 
+                                ['DENIED', 'CANCELED', 'EXPIRED'].includes(r.payment_status) ? 'bg-[#EF4444]/10 text-[#B91C1C] border-[#EF4444]/20' :
+                                'bg-[#F59E0B]/10 text-[#B45309] border-[#F59E0B]/20'
+                              }`}>
+                                $$: {r.payment_status}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right text-[12px] font-mono font-bold text-[#3B82F6]">
+                          {r.pool_id || 'N/A'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
       </main>
     </div>
   )

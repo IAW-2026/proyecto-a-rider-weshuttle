@@ -2,6 +2,8 @@ import './globals.css'
 import { ClerkProvider } from '@clerk/nextjs'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { Suspense } from 'react'
+import Toast from '@/app/Toast'
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
@@ -20,6 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" />
         </head>
         <body className="antialiased">
+          <Suspense fallback={null}>
+            <Toast />
+          </Suspense>
           {children}
         </body>
       </html>

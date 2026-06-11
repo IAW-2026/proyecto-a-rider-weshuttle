@@ -23,23 +23,38 @@ export async function PATCH(
     }
 
     // Evitamos pisar estados si ya estaba cancelada o procesada
-    if (reserva.status === 'CANCELED' || reserva.status === 'DENIED') {
+    if (reserva.reservation_status === 'CANCELED' || reserva.payment_status === 'PAID') {
       return NextResponse.json({ error: "CONFLICT", message: "La reserva ya está en un estado final incompatible." }, { status: 409 });
     }
 
-    let newStatus: any = reserva.status;
+    let newPaymentStatus: any = reserva.payment_status;
+    let newReservationStatus: any = reserva.reservation_status;
 
     if (body.payment_status === 'PAID') {
-      newStatus = 'PAID';
+      newPaymentStatus = 'PAID';
+      // Si se pagó con éxito, pasa a PENDING_DRIVER
+      newReservationStatus = 'PENDING_DRIVER';
     } else if (body.payment_status === 'DENIED') {
-      newStatus = 'DENIED';
+      newPaymentStatus = 'DENIED';
+      // Si se denegó, queda pendiente de pago para que reintente
+      newReservationStatus = 'PENDING_PAYMENT';
+    } else if (body.payment_status === 'CANCELED' || body.payment_status === 'EXPIRED') {
+      newPaymentStatus = body.payment_status;
+      // Si cerró la ventana o expiró el link, cancelamos la reserva
+      newReservationStatus = 'CANCELED';
     } else {
       return NextResponse.json({ error: "BAD_REQUEST", message: "payment_status inválido." }, { status: 400 });
     }
 
-    const updateData: any = { status: newStatus };
+    const updateData: any = { 
+      payment_status: newPaymentStatus,
+      reservation_status: newReservationStatus
+    };
+    
     if (body.payment_status === 'PAID') {
-      updateData.effective_price = body.effective_price;
+      updateData.max_price = body.max_price;
+      updateData.credit_applied = body.credit_applied;
+      updateData.amount_charged = body.amount_charged;
       updateData.payment_transaction_id = body.transaction_id;
     }
 
@@ -49,19 +64,13 @@ export async function PATCH(
       data: updateData
     });
 
-    // Le enviamos una notificación al pasajero
-    await prisma.passengerNotification.create({
-      data: {
-        passenger_user_id: reserva.passenger_user_id,
-        type: body.payment_status === 'PAID' ? 'PAYMENT_SUCCESS' : 'PAYMENT_DENIED',
-        message: body.payment_status === 'PAID' ? 'Tu pago fue procesado con éxito.' : 'Tu pago fue rechazado.'
-      }
-    });
-
     return NextResponse.json({
       reservation_id: reservation_id,
-      reservation_status: newStatus,
-      effective_price: body.payment_status === 'PAID' ? body.effective_price : null
+      payment_status: newPaymentStatus,
+      reservation_status: newReservationStatus,
+      max_price: body.max_price,
+      credit_applied: body.credit_applied,
+      amount_charged: body.amount_charged
     });
   } catch (error) {
     return NextResponse.json({ error: "INTERNAL_SERVER_ERROR", message: "Error interno al procesar el pago." }, { status: 500 });

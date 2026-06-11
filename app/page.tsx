@@ -3,22 +3,15 @@ import Link from 'next/link'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { UserButton } from "@clerk/nextjs"
 import { revalidatePath } from 'next/cache'
+import { getUserCreditBalanceMock } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
 export default async function VistaPublicaViajes() {
-  // Obtenemos los viajes activos para el monitor de flota público
-  const viajes = await prisma.pool.findMany({
-    where: { estado: { in: ['Programado', 'En camino'] } },
-    orderBy: { id: 'desc' }
-  })
-
   // Verificamos si hay un usuario logueado
-  const { userId } = await auth()
+  const { userId, sessionClaims } = await auth()
   const user = await currentUser()
-  const userEmail = user?.emailAddresses[0]?.emailAddress?.toLowerCase() ?? '';
-  const adminEmailsList = (process.env.ADMIN_EMAIL ?? '').split(',').map(e => e.trim().toLowerCase());
-  const isAdmin = adminEmailsList.includes(userEmail);
+  const isAdmin = sessionClaims?.role === 'admin';
 
   const notificaciones = userId ? await prisma.passengerNotification.findMany({
     where: { passenger_user_id: userId, read_at: null },
@@ -30,7 +23,7 @@ export default async function VistaPublicaViajes() {
   const proximoViaje = userId ? await prisma.reservation.findFirst({
     where: {
       passenger_user_id: userId,
-      status: { in: ['PENDING_DRIVER', 'CONFIRMED'] },
+      reservation_status: { in: ['PENDING_PAYMENT', 'PENDING_DRIVER', 'CONFIRMED'] },
       departure_time: { gte: ahora }
     },
     include: { destination: true },
@@ -39,8 +32,11 @@ export default async function VistaPublicaViajes() {
 
   // Contamos cuántos viajes completó el usuario
   const viajesRealizados = userId ? await prisma.reservation.count({
-    where: { passenger_user_id: userId, status: 'PAID' }
+    where: { passenger_user_id: userId, payment_status: 'PAID', reservation_status: { not: 'CANCELED' } }
   }) : 0;
+
+  // Obtenemos el saldo a favor simulando consulta a la Payments App
+  const creditData = userId ? await getUserCreditBalanceMock(userId) : { available_credit: 0 };
 
   const emailName = user?.emailAddresses[0]?.emailAddress?.split('@')[0];
   const displayName = user?.firstName || emailName || 'Pasajero';
@@ -139,17 +135,18 @@ export default async function VistaPublicaViajes() {
         {/* HEADER WELCOME */}
         <header className="mb-10">
           <h2 className="text-[32px] font-bold text-[#0A192F] mb-2 tracking-tight">Bienvenido/a, {displayName}</h2>
-          <p className="text-[#475569] text-[16px] max-w-2xl">Gestiona tus traslados corporativos con precisión y facilidad. Visualiza el estado de la flota en tiempo real.</p>
+          <p className="text-[#475569] text-[16px] max-w-2xl">Gestiona tus traslados corporativos con precisión y facilidad. Tu asiento asegurado en las mejores unidades.</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           
           {/* HERO BANNER */}
-          <section className={`bg-[#0A192F] text-[#F7F9FB] p-8 md:p-10 rounded-lg shadow-sm flex flex-col items-start text-left justify-center ${userId ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
-            <h2 className="text-[32px] font-bold tracking-tight mb-3">¿A dónde viajas hoy?</h2>
-            <p className="text-[16px] text-[#D8DADC] mb-8 max-w-xl leading-relaxed">Gestiona tus traslados corporativos con precisión y comodidad. Tu asiento asegurado en las mejores unidades.</p>
-            <Link href="/reservar" className="bg-[#FFFFFF] text-[#0A192F] px-8 py-3.5 rounded-lg text-[12px] font-bold uppercase tracking-widest hover:bg-gray-100 transition-colors shadow-sm text-center w-full sm:w-auto">
-              Reservar Asiento
+          <section className={`bg-[#0A192F] text-[#F7F9FB] p-8 md:p-10 rounded-xl shadow-sm flex flex-col items-start text-left justify-center relative overflow-hidden ${userId ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+            <span className="material-symbols-outlined absolute -right-10 -bottom-10 text-[180px] opacity-5 pointer-events-none">directions_bus</span>
+            <h2 className="text-[32px] font-bold tracking-tight mb-3 relative z-10">¿A dónde viajamos hoy?</h2>
+            <p className="text-[16px] text-[#D8DADC] mb-8 max-w-xl leading-relaxed relative z-10">Reserva tu asiento en nuestras combis corporativas con hasta 24hs de anticipación y ahorrá compartiendo el viaje.</p>
+            <Link href="/reservar" className="bg-[#FFFFFF] text-[#0A192F] px-8 py-3.5 rounded-lg text-[12px] font-bold uppercase tracking-widest hover:bg-gray-100 transition-colors shadow-sm text-center w-full sm:w-auto relative z-10">
+              Agendar traslado
             </Link>
           </section>
 
@@ -158,9 +155,9 @@ export default async function VistaPublicaViajes() {
             <div className="flex flex-col gap-6 lg:col-span-1">
               
               {/* Widget: Próximo Viaje */}
-              <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg p-6 shadow-sm flex flex-col justify-center hover:border-[#0A192F]/30 transition-colors flex-1">
-                <p className="text-[12px] font-bold uppercase tracking-widest text-[#475569] mb-3">Tu Próximo Viaje</p>
-                {proximoViaje ? (
+              {proximoViaje && (
+                <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col justify-center hover:border-[#0A192F]/30 transition-colors flex-1">
+                  <p className="text-[12px] font-bold uppercase tracking-widest text-[#475569] mb-3">Tu Próximo Viaje</p>
                   <div className="flex flex-col gap-3">
                     <div className="overflow-hidden">
                       <h3 className="text-[18px] font-bold text-[#0A192F] leading-tight truncate">{proximoViaje.pickup_address}</h3>
@@ -169,94 +166,72 @@ export default async function VistaPublicaViajes() {
                         <span className="material-symbols-outlined text-[16px]">schedule</span> {new Date(proximoViaje.departure_time).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} hs
                       </p>
                     </div>
-                  <Link href={`/mis-viajes?viaje_id=${proximoViaje.id}&from=home`} className="mt-1 inline-flex items-center justify-center gap-1 text-[#0A192F] text-[12px] font-bold uppercase hover:bg-[#e2e8f0] bg-[#F7F9FB] border border-[#D8DADC] px-4 py-2.5 rounded-lg transition-colors w-full">
+                    <Link href={`/mis-viajes?viaje_id=${proximoViaje.id}&from=home`} className="mt-1 inline-flex items-center justify-center gap-1 text-[#0A192F] text-[12px] font-bold uppercase hover:bg-[#e2e8f0] bg-[#F7F9FB] border border-[#D8DADC] px-4 py-2.5 rounded-lg transition-colors w-full">
                       Ver detalles <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
                     </Link>
                   </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    <h3 className="text-[15px] font-medium text-[#475569]">No tenés viajes programados</h3>
-                    <Link href="/reservar" className="inline-flex items-center justify-center gap-1 text-[#0A192F] text-[12px] font-bold uppercase hover:bg-[#e2e8f0] bg-[#F7F9FB] border border-[#D8DADC] px-4 py-2.5 rounded-lg transition-colors w-full">
-                      Reservar ahora <span className="material-symbols-outlined text-[14px]">add</span>
-                    </Link>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
               
-              {/* Widget: Historial Corto */}
-              <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg p-5 shadow-sm flex items-center justify-between hover:border-[#0A192F]/30 transition-colors">
-                <p className="text-[12px] font-bold uppercase tracking-widest text-[#475569]">Viajes Completados</p>
-                <h3 className="text-[28px] font-bold text-[#0A192F] leading-none">{viajesRealizados.toString().padStart(2, '0')}</h3>
+              {/* Widgets de Estadísticas Pequeñas */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-4 shadow-sm hover:border-[#0A192F]/30 transition-colors flex flex-col justify-center">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] mb-1">Viajes</p>
+                  <h3 className="text-[24px] font-bold text-[#0A192F] leading-none">{viajesRealizados.toString().padStart(2, '0')}</h3>
+                </div>
+                
+                <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-4 shadow-sm hover:border-[#0A192F]/30 transition-colors relative overflow-hidden flex flex-col justify-center">
+                  <span className="material-symbols-outlined absolute -bottom-3 -right-2 text-[64px] text-[#10B981] opacity-5">account_balance_wallet</span>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#10B981] mb-1">Ahorro a favor</p>
+                  <h3 className="text-[24px] font-bold text-[#0A192F] leading-none">${creditData.available_credit.toLocaleString('es-AR')}</h3>
+                </div>
               </div>
 
             </div>
           )}
         </div>
 
-        {/* SECCIÓN: COMBIS EN REAL-TIME */}
-        <div className="mb-6 flex justify-between items-end relative">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-[20px] font-bold text-[#0A192F]">Combis en Real-Time</h2>
-              <div className="group cursor-help flex items-center sm:relative" tabIndex={0}>
-                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#D8DADC] text-[#0A192F] text-[10px] font-bold hover:bg-[#D8DADC]/80 transition-colors">?</span>
-                <div className="absolute top-[100%] left-0 right-0 sm:top-full sm:left-1/2 sm:right-auto sm:-translate-x-1/2 mt-2 hidden group-hover:block group-focus-within:block w-full sm:w-72 p-4 bg-[#0A192F] text-[#F7F9FB] text-[12px] font-normal rounded-lg shadow-2xl z-[100] leading-relaxed">
-                  Monitor de partidas para pasajeros. Permite identificar tu vehículo asignado y conocer el estado de la flota en tiempo real.
-                  <div className="hidden sm:block absolute sm:left-1/2 -translate-x-1/2 bottom-full border-4 border-transparent border-b-[#0A192F]"></div>
-                </div>
+        {/* SECCIÓN DE BENEFICIOS / INFO CORPORATIVA */}
+        <section className="mt-12 mb-8">
+          <div className="mb-6">
+            <h3 className="text-[20px] font-bold text-[#0A192F]">Ventajas de viajar en Pool</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col items-start cursor-default">
+              <div className="w-10 h-10 rounded-full bg-[#10B981]/10 flex items-center justify-center mb-4 text-[#10B981]">
+                <span className="material-symbols-outlined text-[20px]">eco</span>
               </div>
+              <h4 className="text-[16px] font-bold text-[#0A192F] mb-2">Huella de Carbono</h4>
+              <p className="text-[13px] text-[#475569] leading-relaxed">Al compartir tu viaje, reducís significativamente las emisiones de CO2 en los accesos al polo industrial.</p>
             </div>
-            <p className="text-[14px] text-[#475569] mt-1">Monitor de flota activa</p>
+            <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col items-start cursor-default">
+              <div className="w-10 h-10 rounded-full bg-[#3B82F6]/10 flex items-center justify-center mb-4 text-[#3B82F6]">
+                <span className="material-symbols-outlined text-[20px]">savings</span>
+              </div>
+              <h4 className="text-[16px] font-bold text-[#0A192F] mb-2">Ahorro Garantizado</h4>
+              <p className="text-[13px] text-[#475569] leading-relaxed">Pagás un precio tope inicial y recibís crédito a favor si la combi logra mayor ocupación en el trayecto.</p>
+            </div>
+            <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col items-start cursor-default">
+              <div className="w-10 h-10 rounded-full bg-[#F59E0B]/10 flex items-center justify-center mb-4 text-[#F59E0B]">
+                <span className="material-symbols-outlined text-[20px]">work_history</span>
+              </div>
+              <h4 className="text-[16px] font-bold text-[#0A192F] mb-2">Puntualidad B2B</h4>
+              <p className="text-[13px] text-[#475569] leading-relaxed">Rutas de transporte optimizadas y choferes profesionales para asegurar que llegues a tu turno a tiempo.</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 bg-[#FFFFFF] border border-[#D8DADC] px-3 py-1.5 rounded-lg shadow-sm">
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10B981]"></span>
-            </span>
-            <span className="text-[10px] font-bold text-[#475569] uppercase tracking-widest">Live</span>
-          </div>
-        </div>
+        </section>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {viajes.map((viaje) => {
-            const iniciales = viaje.conductor_nombre.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'DR';
-            return (
-              <div key={viaje.id} className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg p-5 shadow-sm flex flex-col justify-between hover:border-[#0A192F]/40 transition-colors group">
-                <div className="flex justify-between items-start mb-5">
-                  <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${
-                  viaje.estado === 'En camino' ? 'bg-[#10B981]/10 text-[#047857] border-[#10B981]/20' : 
-                    viaje.estado === 'Programado' ? 'bg-[#0A192F]/5 text-[#0A192F] border-[#0A192F]/10' : 
-                  viaje.estado === 'Cancelado' ? 'bg-[#EF4444]/10 text-[#DC2626] border-[#EF4444]/20' :
-                    'bg-[#F7F9FB] text-[#475569] border-[#D8DADC]'
-                  }`}>
-                    {viaje.estado}
-                  </span>
-                  <span className="text-[10px] font-mono font-semibold text-[#475569] bg-[#F7F9FB] border border-[#D8DADC] px-2 py-0.5 rounded">{viaje.vehiculo_patente}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-[#F7F9FB] border border-[#D8DADC] flex items-center justify-center text-[12px] font-bold text-[#0A192F] shrink-0 group-hover:bg-[#0A192F] group-hover:text-white transition-colors">
-                    {iniciales}
-                  </div>
-                  <div className="overflow-hidden">
-                    <h3 className="text-[16px] font-bold text-[#0A192F] truncate">{viaje.conductor_nombre}</h3>
-                    <p className="text-[12px] text-[#475569] flex items-center gap-1 mt-0.5 truncate">
-                      <span className="material-symbols-outlined text-[14px]">schedule</span> 
-                      {viaje.fecha_viaje ? new Date(viaje.fecha_viaje).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' hs' : 'Pronto'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-          
-          {viajes.length === 0 && (
-            <div className="col-span-full p-12 bg-[#FFFFFF] border border-[#D8DADC] border-dashed rounded-lg text-center">
-              <span className="material-symbols-outlined text-4xl text-[#D8DADC] mb-2 block">directions_bus</span>
-              <p className="text-[16px] font-bold text-[#0A192F]">No hay unidades activas</p>
-              <p className="text-[14px] text-[#475569] mt-1">La flota se encuentra en base por el momento.</p>
-            </div>
-          )}
-        </div>
+        {/* FOOTER INFORMATIVO */}
+        <footer className="mt-16 border-t border-[#D8DADC] pt-8 flex flex-col items-center justify-center text-center gap-2">
+          <p className="text-[12px] font-bold text-[#0A192F]">WeShuttle Mobility © 2026</p>
+          <div className="flex items-center gap-4 text-[11px] font-medium text-[#475569]">
+            <Link href="#" className="hover:text-[#3B82F6] transition-colors">Términos y Condiciones</Link>
+            <span>|</span>
+            <Link href="#" className="hover:text-[#3B82F6] transition-colors">Preguntas Frecuentes (FAQ)</Link>
+            <span>|</span>
+            <Link href="#" className="hover:text-[#3B82F6] transition-colors">Soporte B2B</Link>
+          </div>
+        </footer>
 
       </main>
 
