@@ -12,13 +12,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verificamos que el pasajero exista
-    const pasajero = await prisma.passenger.findUnique({
-      where: { clerk_user_id: body.passenger_user_id }
+    // Verificamos que el pasajero exista y realmente haya estado en ese pool
+    const reserva = await prisma.reservation.findFirst({
+      where: { pool_id: body.pool_id, passenger_user_id: body.passenger_user_id }
     });
 
-    if (!pasajero) {
-      return NextResponse.json({ error: "NOT_FOUND", message: "No existe el pasajero indicado." }, { status: 404 });
+    if (!reserva) {
+      return NextResponse.json({ error: "NOT_FOUND", message: "No existe el pasajero o el pool indicado." }, { status: 404 });
     }
 
     // Registramos la notificación para el pasajero

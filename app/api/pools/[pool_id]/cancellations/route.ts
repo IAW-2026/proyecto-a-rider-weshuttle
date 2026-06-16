@@ -15,13 +15,19 @@ export async function POST(
       return NextResponse.json({ error: "BAD_REQUEST", message: "Falta el motivo de cancelación." }, { status: 400 });
     }
 
-    // Buscamos todas las reservas activas asociadas a esta combi
-    const reservas = await prisma.reservation.findMany({
-      where: { pool_id: pool_id, reservation_status: { in: ['PENDING_PAYMENT', 'PENDING_DRIVER', 'CONFIRMED'] } }
+    // Buscamos TODAS las reservas asociadas a este pool para ver si el pool existe en nuestra DB
+    const todasLasReservas = await prisma.reservation.findMany({
+      where: { pool_id: pool_id }
     });
 
-    if (reservas.length === 0) {
-      return NextResponse.json({ error: "NOT_FOUND", message: "No existen reservas asociadas al pool o ya estaban canceladas." }, { status: 404 });
+    if (todasLasReservas.length === 0) {
+      return NextResponse.json({ error: "NOT_FOUND", message: "No existen reservas asociadas al pool." }, { status: 404 });
+    }
+
+    // Filtramos solo las que están en un estado cancelable
+    const reservasActivas = todasLasReservas.filter(r => ['PENDING_PAYMENT', 'PENDING_DRIVER', 'CONFIRMED'].includes(r.reservation_status));
+    if (reservasActivas.length === 0) {
+      return NextResponse.json({ error: "CONFLICT", message: "Las reservas ya estaban canceladas o en un estado final incompatible." }, { status: 409 });
     }
 
     // Pasamos todas esas reservas a estado CANCELED en bloque
@@ -31,7 +37,7 @@ export async function POST(
     });
 
     // Notificamos a los pasajeros afectados (Extraemos los IDs de usuario sin repetir)
-    const usuariosUnicos = [...new Set(reservas.map(r => r.passenger_user_id))];
+    const usuariosUnicos = [...new Set(reservasActivas.map(r => r.passenger_user_id))];
     const notificaciones = usuariosUnicos.map(userId => ({
       passenger_user_id: userId,
       type: 'POOL_CANCELED',
