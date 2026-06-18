@@ -70,7 +70,7 @@ export async function getDriverAppAssignedDriverMock(pool_id: string) {
     pool_id: pool_id,
     pool_status: "ASSIGNED",
     driver: {
-      driver_user_id: "user_driver_01",
+      driver_user_id: "user_3EYQtdZpi4fPlmXGq4EKEa1onL0",
       full_name: "Juliana Pagani"
     },
     vehicle: {
@@ -135,7 +135,7 @@ export async function getUserCreditBalanceMock(user_id: string) {
 export async function getFeedbackAppRating(user_id: string, role: string = 'driver') {
   // Usamos la misma variable de entorno que ya pusiste para el botón de la campanita
   const feedbackUrl = process.env.NEXT_PUBLIC_FEEDBACK_APP_URL;
-  
+
   if (!feedbackUrl) {
     console.warn("Aviso: Falta configurar NEXT_PUBLIC_FEEDBACK_APP_URL en Vercel");
     return { average_rating: null, total_reviews: 0 };
