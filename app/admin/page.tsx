@@ -15,7 +15,7 @@ async function actualizarDestino(formData: FormData) {
   const { userId, sessionClaims } = await auth()
 
   if (sessionClaims?.role !== 'admin') {
-    // Si falla la validación en el admin, simplemente cancelamos la acción en vez de romper la app
+    // Seguridad: Si el usuario no es admin, cancelamos la acción silenciosamente
     return;
   }
 
@@ -24,7 +24,7 @@ async function actualizarDestino(formData: FormData) {
   const ubicacion_lat_long = formData.get('ubicacion') as string
 
   if (!id || !nombre || !ubicacion_lat_long || nombre.trim().length < 3) {
-    // Si falla la validación en el admin, simplemente cancelamos la acción en vez de romper la app
+    // Validación de datos: Si envían campos vacíos o inválidos, abortamos sin romper la app
     return;
   }
 

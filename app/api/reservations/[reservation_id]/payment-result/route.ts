@@ -50,12 +50,17 @@ export async function PATCH(
       payment_status: newPaymentStatus,
       reservation_status: newReservationStatus
     };
+
+    if (body.transaction_id) {
+      updateData.payment_transaction_id = body.transaction_id;
+    }
     
     if (body.payment_status === 'PAID') {
       updateData.max_price = body.max_price;
       updateData.credit_applied = body.credit_applied;
       updateData.amount_charged = body.amount_charged;
-      updateData.payment_transaction_id = body.transaction_id;
+    } else if (body.payment_status === 'DENIED' && body.rejection_reason) {
+      updateData.payment_rejection_reason = body.rejection_reason;
     }
 
     // Actualizamos la reserva en la base de datos
@@ -64,14 +69,20 @@ export async function PATCH(
       data: updateData
     });
 
-    return NextResponse.json({
+    // Armamos la respuesta estricta según el contrato
+    const responsePayload: any = {
       reservation_id: reservation_id,
       payment_status: newPaymentStatus,
-      reservation_status: newReservationStatus,
-      max_price: body.max_price,
-      credit_applied: body.credit_applied,
-      amount_charged: body.amount_charged
-    });
+      reservation_status: newReservationStatus
+    };
+
+    if (newPaymentStatus === 'PAID') {
+      responsePayload.max_price = body.max_price;
+      responsePayload.credit_applied = body.credit_applied;
+      responsePayload.amount_charged = body.amount_charged;
+    }
+
+    return NextResponse.json(responsePayload);
   } catch (error) {
     return NextResponse.json({ error: "INTERNAL_SERVER_ERROR", message: "Error interno al procesar el pago." }, { status: 500 });
   }
