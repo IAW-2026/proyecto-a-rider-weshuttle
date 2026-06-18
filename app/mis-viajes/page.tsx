@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
-import { createDriverAppPoolMock, getDriverAppAssignedDriverMock, fetchPaymentsAppPricingMock, cancelReservationMock, getFeedbackAppRatingMock } from '@/lib/api'
+import { createDriverAppPoolMock, getDriverAppAssignedDriverMock, fetchPaymentsAppPricingMock, cancelReservationMock, getFeedbackAppRating } from '@/lib/api'
 import { UserButton } from "@clerk/nextjs"
 
 export const dynamic = 'force-dynamic'
@@ -166,7 +166,7 @@ export default async function MisViajesPage({
 
     // Obtenemos los datos simulados de los otros microservicios
     const driverData = await getDriverAppAssignedDriverMock("pool_abc123");
-    const ratingData = await getFeedbackAppRatingMock(driverData.driver.driver_user_id);
+    const ratingData = await getFeedbackAppRating(driverData.driver.driver_user_id);
     
     // Creamos el "snapshot" (foto inmutable) de la asignación, según el contrato
     const driverSnapshot: any = {

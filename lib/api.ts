@@ -132,11 +132,22 @@ export async function getUserCreditBalanceMock(user_id: string) {
    ========================================================================= */
 
 // 1. GET /api/ratings/:user_id
-export async function getFeedbackAppRatingMock(user_id: string) {
-  return {
-    user_id: user_id,
-    role: "driver",
-    average_rating: 4.8,
-    total_reviews: 25
-  };
+export async function getFeedbackAppRating(user_id: string, role: string = 'driver') {
+  // Usamos la misma variable de entorno que ya pusiste para el botón de la campanita
+  const feedbackUrl = process.env.NEXT_PUBLIC_FEEDBACK_APP_URL;
+  
+  if (!feedbackUrl) {
+    console.warn("Aviso: Falta configurar NEXT_PUBLIC_FEEDBACK_APP_URL en Vercel");
+    return { average_rating: null, total_reviews: 0 };
+  }
+
+  try {
+    // Hacemos el fetch de verdad a la app de Juan
+    const res = await fetch(`${feedbackUrl}/api/ratings/${user_id}?role=${role}`);
+    if (!res.ok) throw new Error(`Error de Feedback App: ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    console.error("Error al obtener rating del conductor:", error);
+    return { average_rating: null, total_reviews: 0 }; // Si Juan se cae, tu app no explota
+  }
 }
