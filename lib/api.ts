@@ -106,7 +106,7 @@ export async function getDriverAppAssignedDriverMock(pool_id: string) {
 
 // 1. GET /api/payments/pricing-estimate
 export async function fetchPaymentsAppPricing(origin_lat: number, origin_lng: number, destination_id: string, current_passengers: number) {
-  const paymentsUrl = process.env.NEXT_PUBLIC_PAYMENTS_APP_URL || 'https://proyecto-a-payments-weshuttle.vercel.app';
+  const paymentsUrl = process.env.NEXT_PUBLIC_PAYMENTS_APP_URL || '';
   try {
     const headers = await getAuthHeaders();
     const res = await fetch(`${paymentsUrl}/api/payments/pricing-estimate?origin_lat=${origin_lat}&origin_lng=${origin_lng}&destination_id=${destination_id}&current_passengers=${current_passengers}`, {
@@ -126,8 +126,8 @@ export async function fetchPaymentsAppPricing(origin_lat: number, origin_lng: nu
 
 // 2. POST /api/payments/reservations/:reservation_id/checkout
 export async function createPaymentsCheckout(reservation_id: string, pool_id: string, passenger_user_id: string, max_price: number, currency: string = "ARS") {
-  const paymentsUrl = process.env.NEXT_PUBLIC_PAYMENTS_APP_URL || 'https://proyecto-a-payments-weshuttle.vercel.app';
-  const riderUrl = process.env.NEXT_PUBLIC_RIDER_APP_URL || 'https://proyecto-a-rider-weshuttle.vercel.app';
+  const paymentsUrl = process.env.NEXT_PUBLIC_PAYMENTS_APP_URL || '';
+  const riderUrl = process.env.NEXT_PUBLIC_RIDER_APP_URL || '';
   
   const body = {
     pool_id,
@@ -162,7 +162,7 @@ export async function createPaymentsCheckout(reservation_id: string, pool_id: st
 
 // 4. GET /api/payments/users/:user_id/credit-balance
 export async function getUserCreditBalance(user_id: string) {
-  const paymentsUrl = process.env.NEXT_PUBLIC_PAYMENTS_APP_URL || 'https://proyecto-a-payments-weshuttle.vercel.app';
+  const paymentsUrl = process.env.NEXT_PUBLIC_PAYMENTS_APP_URL || '';
   try {
     const headers = await getAuthHeaders();
     const res = await fetch(`${paymentsUrl}/api/payments/users/${user_id}/credit-balance`, {
