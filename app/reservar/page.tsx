@@ -83,8 +83,14 @@ export default async function NuevaReservaPage({
       console.error("Error obteniendo coordenadas:", error);
     }
 
-    // Consulta a microservicios externos para cotizar (enviamos lat, lng, destino y ocupación 0)
-    const paymentsData = await fetchPaymentsAppPricing(lat, lng, destino_id, 0)
+    // Consulta a microservicios externos para cotizar (enviamos lat, lng, destino y ocupación 1 para evitar bug de validación de 0)
+    let paymentsData;
+    try {
+      paymentsData = await fetchPaymentsAppPricing(lat, lng, destino_id, 1)
+    } catch (e) {
+      console.error("Error cotizando viaje:", e);
+      redirect('/reservar?toast=Error:%20No%20se%20pudo%20cotizar%20el%20viaje&toastType=error');
+    }
 
     // Registramos al usuario en nuestra base de datos si es su primera vez
     const pasajeroDb = await prisma.passenger.upsert({

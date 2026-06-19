@@ -120,18 +120,7 @@ export async function fetchPaymentsAppPricing(origin_lat: number, origin_lng: nu
     return await res.json();
   } catch (error) {
     console.error("Error fetching pricing from Payments App:", error);
-    // Fallback mock to prevent app crash if Payments App is down
-    return {
-      currency: "ARS",
-      max_price: 5000,
-      estimated_price: 4200,
-      current_passengers: current_passengers || 5,
-      pricing_detail: {
-        base_price: 5000,
-        estimated_discount: 800,
-        discount_reason: "OCCUPANCY_DISCOUNT"
-      }
-    };
+    throw error;
   }
 }
 
@@ -167,21 +156,7 @@ export async function createPaymentsCheckout(reservation_id: string, pool_id: st
     return data;
   } catch (error) {
     console.error("Error creating checkout in Payments App:", error);
-    // Fallback mock for testing in case Payments App is down
-    return {
-      checkout_id: "checkout_123",
-      reservation_id: reservation_id,
-      pool_id: pool_id,
-      passenger_user_id: passenger_user_id,
-      payment_url: `${riderUrl}/mis-viajes?toast=Pago%20procesado%20correctamente#viaje-${reservation_id}`,
-      checkout_url: `${riderUrl}/mis-viajes?toast=Pago%20procesado%20correctamente#viaje-${reservation_id}`,
-      max_price: max_price,
-      available_credit: 0,
-      credit_applied: 0,
-      amount_to_charge: max_price,
-      currency: currency,
-      checkout_status: "CREATED"
-    };
+    throw error;
   }
 }
 

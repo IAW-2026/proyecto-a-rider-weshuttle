@@ -149,13 +149,19 @@ export default async function MisViajesPage({
     }
 
     // Llamamos a la Payments App para crear el checkout real
-    const checkoutData = await createPaymentsCheckout(
-      reservaCheck.id,
-      poolId,
-      reservaCheck.passenger_user_id,
-      reservaCheck.max_price,
-      reservaCheck.currency
-    )
+    let checkoutData;
+    try {
+      checkoutData = await createPaymentsCheckout(
+        reservaCheck.id,
+        poolId,
+        reservaCheck.passenger_user_id,
+        reservaCheck.max_price,
+        reservaCheck.currency
+      )
+    } catch (e) {
+      console.error("Error creating checkout:", e);
+      redirect(`/mis-viajes?toast=Error:%20Servicio%20de%20pagos%20no%20disponible&toastType=error#viaje-${id}`);
+    }
 
     // Redirigimos al pasajero a la URL de pago de la Payments App
     const urlToRedirect = checkoutData?.checkout_url || checkoutData?.payment_url;
