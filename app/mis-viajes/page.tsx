@@ -239,7 +239,7 @@ export default async function MisViajesPage({
                       <div key={notif.id} className="p-3 mb-1 bg-[#F7F9FB] text-[#0A192F] text-[12px] rounded-lg border border-[#D8DADC]">
                         {notif.type === 'FEEDBACK_AVAILABLE' ? (
                           <a 
-                            href={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || '#'}/?return_url=${process.env.NEXT_PUBLIC_RIDER_APP_URL || 'https://proyecto-a-rider-weshuttle.vercel.app'}`} 
+                            href={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || '#'}/?return_url=${process.env.NEXT_PUBLIC_RIDER_APP_URL || '#'}`} 
                             className="text-[#3B82F6] hover:underline font-bold block"
                           >
                             {notif.message} <span className="material-symbols-outlined text-[10px] align-middle ml-1">open_in_new</span>
@@ -455,7 +455,7 @@ export default async function MisViajesPage({
 
                     <div className="flex justify-between items-center pt-4 border-t border-[#D8DADC]">
                       {reserva.reservation_status === 'CONFIRMED' ? (
-                        <Link href={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || 'https://proyecto-a-feedback-weshuttle.vercel.app'}/reviews/new?pool_id=${reserva.pool_id}&reservation_id=${reserva.id}`} target="_blank" rel="noopener noreferrer" className="text-[12px] font-bold text-[#F59E0B] hover:underline flex items-center gap-1">
+                        <Link href={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || '#'}/?return_url=${process.env.NEXT_PUBLIC_RIDER_APP_URL || '#'}`} className="text-[12px] font-bold text-[#F59E0B] hover:underline flex items-center gap-1">
                           <span className="material-symbols-outlined text-[16px] fill-current">star</span> Calificar
                         </Link>
                       ) : (

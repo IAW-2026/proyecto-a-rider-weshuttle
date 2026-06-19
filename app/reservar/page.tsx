@@ -185,7 +185,7 @@ export default async function NuevaReservaPage({
                       <div key={notif.id} className="p-3 mb-1 bg-[#F7F9FB] text-[#0A192F] text-[12px] rounded-lg border border-[#D8DADC]">
                         {notif.type === 'FEEDBACK_AVAILABLE' ? (
                           <a 
-                            href={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || '#'}/?return_url=${process.env.NEXT_PUBLIC_RIDER_APP_URL || 'https://proyecto-a-rider-weshuttle.vercel.app'}`} 
+                            href={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || '#'}/?return_url=${process.env.NEXT_PUBLIC_RIDER_APP_URL || '#'}`} 
                             className="text-[#3B82F6] hover:underline font-bold block"
                           >
                             {notif.message} <span className="material-symbols-outlined text-[10px] align-middle ml-1">open_in_new</span>

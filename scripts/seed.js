@@ -20,7 +20,6 @@ async function main() {
   await prisma.passengerNotification.deleteMany()
   await prisma.reservation.deleteMany()
   await prisma.passenger.deleteMany()
-  await prisma.pool.deleteMany()
   const deletedCount = await prisma.destination.deleteMany()
   console.log(`✅ Eliminados ${deletedCount.count} destinos`)
 
@@ -36,16 +35,6 @@ async function main() {
   destinos.forEach(d => {
     console.log(`  📍 ${d.name} (${d.address})`)
   })
-
-  console.log('🚐 Inyectando viajes de prueba (Pools)...')
-  await prisma.pool.createMany({
-    data: [
-      { conductor_nombre: 'Carlos Gómez', vehiculo_patente: 'Toyota - AF 123 CD', estado: 'Programado' },
-      { conductor_nombre: 'Juliana Pagani', vehiculo_patente: 'Sprinter - AF 123 JK', estado: 'En camino' },
-      { conductor_nombre: 'Marcos Silva', vehiculo_patente: 'Transit - AB 456 EF', estado: 'Finalizado' },
-    ]
-  });
-  console.log('✅ ¡Viajes creados exitosamente!')
 }
 
 main()
