@@ -107,9 +107,11 @@ export async function getDriverAppAssignedDriverMock(pool_id: string) {
 // 1. GET /api/payments/pricing-estimate
 export async function fetchPaymentsAppPricing(origin_lat: number, origin_lng: number, destination_id: string, current_passengers: number) {
   const paymentsUrl = process.env.NEXT_PUBLIC_PAYMENTS_APP_URL || '';
+  const url = `${paymentsUrl}/api/payments/pricing-estimate?origin_lat=${origin_lat}&origin_lng=${origin_lng}&destination_id=${destination_id}&current_passengers=${current_passengers}`;
+  console.log("Fetching pricing estimate URL:", url);
   try {
     const headers = await getAuthHeaders();
-    const res = await fetch(`${paymentsUrl}/api/payments/pricing-estimate?origin_lat=${origin_lat}&origin_lng=${origin_lng}&destination_id=${destination_id}&current_passengers=${current_passengers}`, {
+    const res = await fetch(url, {
       headers
     });
     if (!res.ok) {
