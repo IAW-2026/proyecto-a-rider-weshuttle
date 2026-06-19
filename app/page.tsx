@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { UserButton } from "@clerk/nextjs"
 import { revalidatePath } from 'next/cache'
-import { getUserCreditBalanceMock } from '@/lib/api'
+import { getUserCreditBalance } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,7 +36,7 @@ export default async function VistaPublicaViajes() {
   }) : 0;
 
   // Obtenemos el saldo a favor simulando consulta a la Payments App
-  const creditData = userId ? await getUserCreditBalanceMock(userId) : { available_credit: 0 };
+  const creditData = userId ? await getUserCreditBalance(userId) : { available_credit: 0 };
 
   const emailName = user?.emailAddresses[0]?.emailAddress?.split('@')[0];
   const displayName = user?.firstName || emailName || 'Pasajero';

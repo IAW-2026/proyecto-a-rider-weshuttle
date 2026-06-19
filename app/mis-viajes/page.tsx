@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
-import { createDriverAppPoolMock, getDriverAppAssignedDriverMock, fetchPaymentsAppPricingMock, cancelReservationMock, getFeedbackAppRating } from '@/lib/api'
+import { createDriverAppPoolMock, getDriverAppAssignedDriverMock, fetchPaymentsAppPricing, createPaymentsCheckout, cancelReservationMock, getFeedbackAppRating } from '@/lib/api'
 import { UserButton } from "@clerk/nextjs"
 
 export const dynamic = 'force-dynamic'
@@ -125,33 +125,45 @@ export default async function MisViajesPage({
       redirect(`/mis-viajes?toast=Error:%20Viaje%20Expirado&toastType=error#viaje-${id}`);
     }
 
-    // Obtenemos el precio estimado real simulando consulta a la Payments App
-    const paymentsData = await fetchPaymentsAppPricingMock(reservaCheck.pickup_lat ?? 0, reservaCheck.pickup_lng ?? 0, reservaCheck.destination_id, 0)
+    // Buscamos o creamos el pool en la Driver App
+    let poolId = reservaCheck.pool_id;
+    if (!poolId) {
+      const driverData = await createDriverAppPoolMock(
+        reservaCheck.destination_id,
+        reservaCheck.departure_time.toISOString(),
+        reservaCheck.id,
+        reservaCheck.passenger_user_id,
+        {
+          address: reservaCheck.pickup_address,
+          lat: reservaCheck.pickup_lat,
+          lng: reservaCheck.pickup_lng
+        }
+      )
+      poolId = driverData.pool_id;
 
-    // Simulamos que avisamos a la Driver App que sume este pasajero y nos asigne un pool
-    const driverData = await createDriverAppPoolMock(
-      reservaCheck.destination_id,
-      reservaCheck.departure_time.toISOString(),
+      // Guardamos el pool_id de referencia en nuestra DB
+      await prisma.reservation.update({
+        where: { id },
+        data: { pool_id: poolId }
+      })
+    }
+
+    // Llamamos a la Payments App para crear el checkout real
+    const checkoutData = await createPaymentsCheckout(
       reservaCheck.id,
+      poolId,
       reservaCheck.passenger_user_id,
-      {
-        address: reservaCheck.pickup_address,
-        lat: reservaCheck.pickup_lat,
-        lng: reservaCheck.pickup_lng
-      }
+      reservaCheck.max_price,
+      reservaCheck.currency
     )
 
-    await prisma.reservation.update({
-      where: { id },
-      data: {
-        reservation_status: 'PENDING_DRIVER',
-        payment_status: 'PAID',
-        amount_charged: paymentsData.estimated_price,
-        pool_id: driverData.pool_id
-      }
-    })
-    revalidatePath('/mis-viajes')
-    redirect(`/mis-viajes?toast=Pago%20procesado%20correctamente#viaje-${id}`)
+    // Redirigimos al pasajero a la URL de pago de la Payments App
+    const urlToRedirect = checkoutData?.checkout_url || checkoutData?.payment_url;
+    if (urlToRedirect) {
+      redirect(urlToRedirect)
+    } else {
+      redirect(`/mis-viajes?toast=Error:%20No%20se%20pudo%20generar%20el%20link%20de%20pago&toastType=error#viaje-${id}`);
+    }
   }
 
   // --- SERVER ACTIONS SIMULADAS (Dev Mode / Mocks) ---
@@ -382,7 +394,7 @@ export default async function MisViajesPage({
                         <form action={simularPago}>
                           <input type="hidden" name="reserva_id" value={reserva.id} />
                           <button type="submit" className="w-full py-2.5 rounded-[8px] bg-[#3B82F6] text-white text-[12px] font-bold uppercase tracking-widest hover:bg-[#2563EB] transition-colors shadow-sm mb-2">
-                            Simular Pago
+                            Pagar Viaje
                           </button>
                         </form>
                       )}

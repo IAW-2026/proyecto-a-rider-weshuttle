@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { addReservationToPoolMock } from '@/lib/api'
 
 export async function PATCH(
   request: Request,
@@ -34,6 +35,15 @@ export async function PATCH(
       newPaymentStatus = 'PAID';
       // Si se pagó con éxito, pasa a PENDING_DRIVER
       newReservationStatus = 'PENDING_DRIVER';
+
+      // Avisamos a la Driver App que sume este pasajero al pool
+      if (reserva.pool_id) {
+        await addReservationToPoolMock(reserva.pool_id, reserva.id, reserva.passenger_user_id, {
+          address: reserva.pickup_address,
+          lat: reserva.pickup_lat,
+          lng: reserva.pickup_lng
+        });
+      }
     } else if (body.payment_status === 'DENIED') {
       newPaymentStatus = 'DENIED';
       // Si se denegó, queda pendiente de pago para que reintente

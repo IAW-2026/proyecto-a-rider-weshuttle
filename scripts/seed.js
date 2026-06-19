@@ -26,9 +26,9 @@ async function main() {
   console.log('🌱 Inyectando destinos predeterminados...')
   
   const destinos = await Promise.all([
-    prisma.destination.create({ data: { name: 'Polo Petroquímico', address: 'Ruta Nacional 3, Km 578', lat: -38.7964, lng: -62.2694, active: true } }),
-    prisma.destination.create({ data: { name: 'Puerto de Ingeniero White', address: 'Puerto Ing. White', lat: -38.7842, lng: -62.2667, active: true } }),
-    prisma.destination.create({ data: { name: 'Parque Industrial', address: 'Parque Industrial, Calle 1', lat: -38.7753, lng: -62.2709, active: true } })
+    prisma.destination.create({ data: { id: 'dest_polo_petroquimico', name: 'Polo Petroquímico', address: 'Ruta Nacional 3, Km 578', lat: -38.7964, lng: -62.2694, active: true } }),
+    prisma.destination.create({ data: { id: 'dest_puerto_ingeniero_white', name: 'Puerto de Ingeniero White', address: 'Puerto Ing. White', lat: -38.7842, lng: -62.2667, active: true } }),
+    prisma.destination.create({ data: { id: 'dest_parque_industrial', name: 'Parque Industrial', address: 'Parque Industrial, Calle 1', lat: -38.7753, lng: -62.2709, active: true } })
   ])
 
   console.log('✅ ¡Destinos creados exitosamente!')
