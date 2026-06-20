@@ -21,83 +21,141 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
    ========================================================================= */
 
 // 1. GET /api/pools/search
-export async function searchDriverAppPoolsMock(destination_id: string, departure_time: string) {
-  // Nota: Para probar el caso donde NO hay combi, podrías cambiar exists a "false" temporalmente.
-  return {
-    exists: true,
-    pool: {
-      pool_id: "pool_abc123",
-      destination_id: destination_id,
-      departure_time: departure_time,
-      status: "AVAILABLE",
-      current_passengers: 5,
-      max_capacity: 15
+// 1. GET /api/pools/search
+export async function searchDriverAppPools(destination_id: string, departure_time: string) {
+  const driverUrl = process.env.NEXT_PUBLIC_DRIVER_APP_URL || '';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${driverUrl}/api/pools/search?destination_id=${destination_id}&departure_time=${departure_time}`, {
+      headers
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`Driver App search pools API error response (status ${res.status}):`, errText);
+      throw new Error(`Driver App search pools API returned status ${res.status}: ${errText}`);
     }
-  };
+    return await res.json();
+  } catch (error) {
+    console.error("Error searching pools in Driver App:", error);
+    throw error;
+  }
 }
 
 // 2. POST /api/pools
-export async function createDriverAppPoolMock(destination_id: string, departure_time: string, reservation_id: string, passenger_user_id: string, pickup_point: any) {
-  return {
-    pool_id: "pool_abc123",
-    status: "AVAILABLE",
-    current_passengers: 1,
-    max_capacity: 15
+export async function createDriverAppPool(destination_id: string, departure_time: string, reservation_id: string, passenger_user_id: string, pickup_point: any) {
+  const driverUrl = process.env.NEXT_PUBLIC_DRIVER_APP_URL || '';
+  const body = {
+    destination_id,
+    departure_time,
+    reservation_id,
+    passenger_user_id,
+    pickup_point
   };
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${driverUrl}/api/pools`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`Driver App create pool API error response (status ${res.status}):`, errText);
+      throw new Error(`Driver App create pool API returned status ${res.status}: ${errText}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("Error creating pool in Driver App:", error);
+    throw error;
+  }
 }
 
 // 3. POST /api/pools/:pool_id/reservations
-export async function addReservationToPoolMock(pool_id: string, reservation_id: string, passenger_user_id: string, pickup_point: any) {
-  return {
-    pool_id: pool_id,
-    reservation_id: reservation_id,
-    pool_status: "AVAILABLE",
-    current_passengers: 6,
-    max_capacity: 15
+export async function addReservationToPool(pool_id: string, reservation_id: string, passenger_user_id: string, pickup_point: any) {
+  const driverUrl = process.env.NEXT_PUBLIC_DRIVER_APP_URL || '';
+  const body = {
+    reservation_id,
+    passenger_user_id,
+    pickup_point
   };
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${driverUrl}/api/pools/${pool_id}/reservations`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`Driver App add reservation API error response (status ${res.status}):`, errText);
+      throw new Error(`Driver App add reservation API returned status ${res.status}: ${errText}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("Error adding reservation to pool in Driver App:", error);
+    throw error;
+  }
 }
 
 // 4. DELETE /api/pools/:pool_id/reservations/:reservation_id
-export async function cancelReservationMock(pool_id: string, reservation_id: string) {
-  return {
-    pool_id: pool_id,
-    reservation_id: reservation_id,
-    current_passengers: 5,
-    pool_status: "AVAILABLE"
-  };
+export async function cancelReservation(pool_id: string, reservation_id: string) {
+  const driverUrl = process.env.NEXT_PUBLIC_DRIVER_APP_URL || '';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${driverUrl}/api/pools/${pool_id}/reservations/${reservation_id}`, {
+      method: 'DELETE',
+      headers
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`Driver App cancel reservation API error response (status ${res.status}):`, errText);
+      throw new Error(`Driver App cancel reservation API returned status ${res.status}: ${errText}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("Error canceling reservation in Driver App:", error);
+    throw error;
+  }
 }
 
 // 5. GET /api/pools/:pool_id/status
-export async function getDriverAppPoolStatusMock(pool_id: string) {
-  return {
-    pool_id: pool_id,
-    status: "IN_PROGRESS",
-    destination_id: "dest_polo_petroquimico",
-    departure_time: "2026-06-10T08:00:00Z",
-    current_passengers: 8,
-    max_capacity: 15,
-    target_user_id: "user_def456",
-    hito: "El conductor está en camino a tu ubicación",
-    updated_at: "2026-06-10T07:15:00Z"
-  };
+export async function getDriverAppPoolStatus(pool_id: string) {
+  const driverUrl = process.env.NEXT_PUBLIC_DRIVER_APP_URL || '';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${driverUrl}/api/pools/${pool_id}/status`, {
+      headers
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`Driver App pool status API error response (status ${res.status}):`, errText);
+      throw new Error(`Driver App pool status API returned status ${res.status}: ${errText}`);
+    }
+    return await res.json();
+  } catch (error) {
+    console.error("Error getting pool status in Driver App:", error);
+    throw error;
+  }
 }
 
 // 6. GET /api/pools/:pool_id/assigned-driver
-export async function getDriverAppAssignedDriverMock(pool_id: string) {
-  return {
-    pool_id: pool_id,
-    pool_status: "ASSIGNED",
-    driver: {
-      driver_user_id: "user_3EYQtdZpi4fPlmXGq4EKEa1onL0",
-      full_name: "Juliana Pagani"
-    },
-    vehicle: {
-      vehicle_id: "veh_123",
-      brand: "Mercedes-Benz",
-      model: "Sprinter",
-      license_plate: "AF123JK"
+export async function getDriverAppAssignedDriver(pool_id: string) {
+  const driverUrl = process.env.NEXT_PUBLIC_DRIVER_APP_URL || '';
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${driverUrl}/api/pools/${pool_id}/assigned-driver`, {
+      headers
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`Driver App assigned driver API error response (status ${res.status}):`, errText);
+      throw new Error(`Driver App assigned driver API returned status ${res.status}: ${errText}`);
     }
-  };
+    return await res.json();
+  } catch (error) {
+    console.error("Error getting assigned driver in Driver App:", error);
+    throw error;
+  }
 }
 
 /* =========================================================================

@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
-import { addReservationToPoolMock } from '@/lib/api'
+import { addReservationToPool } from '@/lib/api'
 
 export async function PATCH(
   request: Request,
@@ -38,7 +38,7 @@ export async function PATCH(
 
       // Avisamos a la Driver App que sume este pasajero al pool
       if (reserva.pool_id) {
-        await addReservationToPoolMock(reserva.pool_id, reserva.id, reserva.passenger_user_id, {
+        await addReservationToPool(reserva.pool_id, reserva.id, reserva.passenger_user_id, {
           address: reserva.pickup_address,
           lat: reserva.pickup_lat,
           lng: reserva.pickup_lng
@@ -94,6 +94,8 @@ export async function PATCH(
 
     return NextResponse.json(responsePayload);
   } catch (error) {
-    return NextResponse.json({ error: "INTERNAL_SERVER_ERROR", message: "Error interno al procesar el pago." }, { status: 500 });
+    console.error("Error in payment-result webhook:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: "INTERNAL_SERVER_ERROR", message: "Error interno al procesar el pago. Detalle: " + msg }, { status: 500 });
   }
 }

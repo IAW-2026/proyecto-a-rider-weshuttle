@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
-import { createDriverAppPoolMock, getDriverAppAssignedDriverMock, fetchPaymentsAppPricing, createPaymentsCheckout, cancelReservationMock, getFeedbackAppRating } from '@/lib/api'
+import { createDriverAppPool, getDriverAppAssignedDriver, fetchPaymentsAppPricing, createPaymentsCheckout, cancelReservation, getFeedbackAppRating, searchDriverAppPools, getDriverAppPoolStatus } from '@/lib/api'
 import { UserButton } from "@clerk/nextjs"
 
 export const dynamic = 'force-dynamic'
@@ -104,7 +104,7 @@ export default async function MisViajesPage({
 
     // Avisamos a la Driver App que liberamos el asiento
     if (reserva?.pool_id) {
-      await cancelReservationMock(reserva.pool_id, id)
+      await cancelReservation(reserva.pool_id, id)
     }
 
     // Actualizamos el estado en nuestra base de datos
@@ -128,18 +128,31 @@ export default async function MisViajesPage({
     // Buscamos o creamos el pool en la Driver App
     let poolId = reservaCheck.pool_id;
     if (!poolId) {
-      const driverData = await createDriverAppPoolMock(
-        reservaCheck.destination_id,
-        reservaCheck.departure_time.toISOString(),
-        reservaCheck.id,
-        reservaCheck.passenger_user_id,
-        {
-          address: reservaCheck.pickup_address,
-          lat: reservaCheck.pickup_lat,
-          lng: reservaCheck.pickup_lng
+      // 1. Buscamos si ya existe un pool compatible en la Driver App
+      try {
+        const pools = await searchDriverAppPools(reservaCheck.destination_id, reservaCheck.departure_time.toISOString());
+        if (pools && pools.length > 0) {
+          poolId = pools[0].pool_id;
         }
-      )
-      poolId = driverData.pool_id;
+      } catch (err) {
+        console.error("Error al buscar pools en Driver App:", err);
+      }
+
+      // 2. Si no existe, creamos uno nuevo
+      if (!poolId) {
+        const driverData = await createDriverAppPool(
+          reservaCheck.destination_id,
+          reservaCheck.departure_time.toISOString(),
+          reservaCheck.id,
+          reservaCheck.passenger_user_id,
+          {
+            address: reservaCheck.pickup_address,
+            lat: reservaCheck.pickup_lat,
+            lng: reservaCheck.pickup_lng
+          }
+        )
+        poolId = driverData.pool_id;
+      }
 
       // Guardamos el pool_id de referencia en nuestra DB
       await prisma.reservation.update({
@@ -153,7 +166,7 @@ export default async function MisViajesPage({
     try {
       checkoutData = await createPaymentsCheckout(
         reservaCheck.id,
-        poolId,
+        poolId!,
         reservaCheck.passenger_user_id,
         reservaCheck.max_price,
         reservaCheck.currency
@@ -172,8 +185,8 @@ export default async function MisViajesPage({
     }
   }
 
-  // --- SERVER ACTIONS SIMULADAS (Dev Mode / Mocks) ---
-  async function simularConfirmacion(formData: FormData) {
+  // --- ACCIÓN: Consultar Asignación desde la Driver App ---
+  async function verificarAsignacion(formData: FormData) {
     'use server'
     const id = formData.get('reserva_id') as string
 
@@ -182,27 +195,69 @@ export default async function MisViajesPage({
       redirect(`/mis-viajes?toast=Error:%20Viaje%20Expirado&toastType=error#viaje-${id}`);
     }
 
-    // Obtenemos los datos simulados de los otros microservicios
-    const driverData = await getDriverAppAssignedDriverMock("pool_abc123");
-    const ratingData = await getFeedbackAppRating(driverData.driver.driver_user_id);
-
-    // Creamos el "snapshot" (foto inmutable) de la asignación, según el contrato
-    const driverSnapshot: any = {
-      driver_user_id: driverData.driver.driver_user_id,
-      driver_name: driverData.driver.full_name,
-      driver_rating: ratingData.average_rating,
-      vehicle: { ...driverData.vehicle }
+    if (!reservaCheck.pool_id) {
+      redirect(`/mis-viajes?toast=Error:%20El%20viaje%20no%20tiene%20un%20pool%20asociado&toastType=error#viaje-${id}`);
     }
 
-    await prisma.reservation.update({
-      where: { id },
-      data: {
-        reservation_status: 'CONFIRMED',
-        assigned_driver_snapshot: driverSnapshot
+    let redirectUrl = '';
+    try {
+      // Consultamos el conductor asignado real
+      const driverData = await getDriverAppAssignedDriver(reservaCheck.pool_id);
+
+      if (!driverData || !driverData.driver) {
+        redirectUrl = `/mis-viajes?toast=Aún%20sin%20conductor%20asignado.%20Consultá%20más%20tarde.&toastType=warning#viaje-${id}`;
+      } else {
+        const ratingData = await getFeedbackAppRating(driverData.driver.driver_user_id);
+
+        // Consultamos la ocupación real del pool
+        let currentPassengers = 1;
+        let maxCapacity = 15;
+        try {
+          const statusData = await getDriverAppPoolStatus(reservaCheck.pool_id);
+          if (statusData) {
+            currentPassengers = statusData.current_passengers || 1;
+            maxCapacity = statusData.max_capacity || 15;
+          }
+        } catch (err) {
+          console.error("Error al consultar ocupación del pool:", err);
+        }
+
+        // Mapeamos los datos del vehículo de forma robusta por si vienen en castellano u otros formatos
+        const v = driverData.vehicle || {};
+        const vehicleSnapshot = {
+          brand: v.brand || v.marca || '',
+          model: v.model || v.modelo || '',
+          license_plate: v.license_plate || v.patente || v.plate || v.licensePlate || ''
+        };
+
+        // Creamos el "snapshot" de la asignación según el contrato
+        const driverSnapshot: any = {
+          driver_user_id: driverData.driver.driver_user_id,
+          driver_name: driverData.driver.full_name,
+          driver_rating: ratingData.average_rating,
+          vehicle: vehicleSnapshot,
+          current_passengers: currentPassengers,
+          max_capacity: maxCapacity
+        }
+
+        await prisma.reservation.update({
+          where: { id },
+          data: {
+            reservation_status: 'CONFIRMED',
+            assigned_driver_snapshot: driverSnapshot
+          }
+        })
+        revalidatePath('/mis-viajes')
+        redirectUrl = `/mis-viajes?toast=Conductor%20confirmado!#viaje-${id}`;
       }
-    })
-    revalidatePath('/mis-viajes')
-    redirect(`/mis-viajes?toast=Conductor%20asignado#viaje-${id}`)
+    } catch (e: any) {
+      console.error("Error al consultar asignación:", e);
+      redirectUrl = `/mis-viajes?toast=Error%20al%20conectar%20con%20Driver%20App&toastType=error#viaje-${id}`;
+    }
+
+    if (redirectUrl) {
+      redirect(redirectUrl);
+    }
   }
 
   // --- SERVER ACTION: Limpiar notificaciones ---
@@ -360,7 +415,11 @@ export default async function MisViajesPage({
                           <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] mb-1">Ocupación</p>
                           <div className="flex items-center gap-1.5 text-[#0A192F]">
                             <span className="material-symbols-outlined text-[18px]">group</span>
-                            <span className="text-[14px] font-bold">N/A</span>
+                            <span className="text-[14px] font-bold">
+                              {(reserva.assigned_driver_snapshot as any)?.current_passengers && (reserva.assigned_driver_snapshot as any)?.max_capacity
+                                ? `${(reserva.assigned_driver_snapshot as any).current_passengers}/${(reserva.assigned_driver_snapshot as any).max_capacity}`
+                                : 'N/A'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -406,10 +465,10 @@ export default async function MisViajesPage({
                       )}
 
                       {!isPast && reserva.reservation_status === 'PENDING_DRIVER' && reserva.payment_status === 'PAID' && (
-                        <form action={simularConfirmacion}>
+                        <form action={verificarAsignacion}>
                           <input type="hidden" name="reserva_id" value={reserva.id} />
                           <button type="submit" className="w-full py-2.5 rounded-[8px] border-2 border-[#0A192F] text-[#0A192F] text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F] hover:text-white transition-colors mb-2">
-                            Simular Asignación
+                            Consultar Asignación
                           </button>
                         </form>
                       )}
