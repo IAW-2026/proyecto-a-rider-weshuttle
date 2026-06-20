@@ -130,9 +130,9 @@ export default async function MisViajesPage({
     if (!poolId) {
       // 1. Buscamos si ya existe un pool compatible en la Driver App
       try {
-        const pools = await searchDriverAppPools(reservaCheck.destination_id, reservaCheck.departure_time.toISOString());
-        if (pools && pools.length > 0) {
-          poolId = pools[0].pool_id;
+        const searchResult = await searchDriverAppPools(reservaCheck.destination_id, reservaCheck.departure_time.toISOString());
+        if (searchResult && searchResult.exists && searchResult.pool) {
+          poolId = searchResult.pool.pool_id;
         }
       } catch (err) {
         console.error("Error al buscar pools en Driver App:", err);
