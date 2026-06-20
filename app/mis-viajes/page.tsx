@@ -367,7 +367,7 @@ export default async function MisViajesPage({
                     <div className="flex justify-between items-center mb-6">
                       <p className="text-[12px] font-bold uppercase text-[#475569] flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-[16px]">calendar_today</span>
-                        {new Date(reserva.departure_time).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short' })}
+                        {new Date(reserva.departure_time).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'America/Argentina/Buenos_Aires' })}
                       </p>
                       <span className={`px-2.5 py-1 rounded-[6px] text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border ${reserva.reservation_status === 'CANCELED' ? 'bg-[#EF4444]/10 text-[#B91C1C] border-[#EF4444]/20' :
                           reserva.payment_status === 'UNPAID' ? 'bg-[#3B82F6]/10 text-[#1D4ED8] border-[#3B82F6]/20' :
@@ -387,7 +387,7 @@ export default async function MisViajesPage({
                     <div className="relative pl-6 border-l-2 border-dashed border-[#D8DADC] ml-2 mb-8 space-y-8 flex-1">
                       <div className="relative">
                         <span className="absolute -left-[31px] top-1 w-3 h-3 bg-[#FFFFFF] border-[3px] border-[#0A192F] rounded-full"></span>
-                        <p className="text-[14px] text-[#475569] font-medium leading-none mb-1">{new Date(reserva.departure_time).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs</p>
+                        <p className="text-[14px] text-[#475569] font-medium leading-none mb-1">{new Date(reserva.departure_time).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' })} hs</p>
                         <h3 className="text-[18px] font-bold text-[#0A192F] leading-tight">{reserva.pickup_address}</h3>
                       </div>
                       {reserva.credit_granted > 0 && (
@@ -523,7 +523,7 @@ export default async function MisViajesPage({
                 {historial.map((reserva) => (
                   <div key={reserva.id} className="bg-[#FFFFFF] border border-[#D8DADC] rounded-[12px] p-5 shadow-sm hover:border-[#0A192F]/30 transition-colors">
                     <div className="flex justify-between items-start mb-2">
-                      <span className="text-[12px] font-bold text-[#475569]">{new Date(reserva.departure_time).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}</span>
+                      <span className="text-[12px] font-bold text-[#475569]">{new Date(reserva.departure_time).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Argentina/Buenos_Aires' }).toUpperCase()}</span>
                       <span className={`text-[10px] font-bold uppercase tracking-widest ${reserva.reservation_status === 'CANCELED' ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
                         {reserva.reservation_status === 'CANCELED' ? 'Cancelado' : 'Completado'}
                       </span>
