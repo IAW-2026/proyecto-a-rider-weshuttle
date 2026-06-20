@@ -4,6 +4,9 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { Suspense } from 'react'
 import Toast from '@/app/Toast'
+import { auth, currentUser } from '@clerk/nextjs/server'
+import { prisma } from '@/lib/prisma'
+import ProfileSetupModal from '@/app/ui/ProfileSetupModal'
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
@@ -12,7 +15,23 @@ export const metadata: Metadata = {
   description: 'Plataforma B2B para la gestión de traslados y monitoreo de flota en tiempo real.',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { userId } = await auth()
+  let showProfileSetup = false
+  let defaultName = ''
+
+  if (userId) {
+    const passenger = await prisma.passenger.findUnique({
+      where: { clerk_user_id: userId }
+    })
+
+    if (!passenger || passenger.full_name.trim() === '' || passenger.full_name === 'Pasajero' || passenger.phone === 'Sin registrar') {
+      showProfileSetup = true
+      const user = await currentUser()
+      defaultName = [user?.firstName, user?.lastName].filter(Boolean).join(' ')
+    }
+  }
+
   return (
     <ClerkProvider>
       <html lang="es" className={inter.className}>
@@ -25,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Suspense fallback={null}>
             <Toast />
           </Suspense>
+          <ProfileSetupModal isOpen={showProfileSetup} defaultName={defaultName} />
           {children}
         </body>
       </html>

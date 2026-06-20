@@ -93,12 +93,13 @@ export default async function NuevaReservaPage({
     }
 
     // Registramos al usuario en nuestra base de datos si es su primera vez
+    const defaultFullName = [actionUser?.firstName, actionUser?.lastName].filter(Boolean).join(' ') || 'Pasajero';
     const pasajeroDb = await prisma.passenger.upsert({
       where: { clerk_user_id: actionUserId },
       update: {},
       create: {
         clerk_user_id: actionUserId,
-        full_name: actionUser?.firstName || 'Pasajero',
+        full_name: defaultFullName,
         phone: "Sin registrar",
       }
     })

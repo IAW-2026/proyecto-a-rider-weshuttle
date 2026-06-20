@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { createDriverAppPool, getDriverAppAssignedDriver, fetchPaymentsAppPricing, createPaymentsCheckout, cancelReservation, getFeedbackAppRating, searchDriverAppPools, getDriverAppPoolStatus } from '@/lib/api'
 import { UserButton } from "@clerk/nextjs"
+import TripTracker from './TripTracker'
 
 export const dynamic = 'force-dynamic'
 
@@ -451,6 +452,13 @@ export default async function MisViajesPage({
                           </div>
                         </div>
                       </div>
+                    )}
+                    {/* Seguimiento en vivo si el pool está asignado/confirmado */}
+                    {reserva.pool_id && ['CONFIRMED', 'PENDING_DRIVER'].includes(reserva.reservation_status) && (
+                      <TripTracker 
+                        poolId={reserva.pool_id} 
+                        passengerUserId={reserva.passenger_user_id} 
+                      />
                     )}
                   </div>
 

@@ -38,8 +38,13 @@ export default async function VistaPublicaViajes() {
   // Obtenemos el saldo a favor simulando consulta a la Payments App
   const creditData = userId ? await getUserCreditBalance(userId) : { available_credit: 0 };
 
+  // Obtenemos los datos del pasajero en la base de datos para usar su nombre real
+  const passenger = userId ? await prisma.passenger.findUnique({
+    where: { clerk_user_id: userId }
+  }) : null;
+
   const emailName = user?.emailAddresses[0]?.emailAddress?.split('@')[0];
-  const displayName = user?.firstName || emailName || 'Pasajero';
+  const displayName = passenger?.full_name || user?.firstName || emailName || 'Pasajero';
 
   // --- SERVER ACTION: Marcar notificaciones como leídas ---
   async function limpiarNotificaciones() {
