@@ -180,7 +180,13 @@ export default async function MisViajesPage({
       }
     }
 
-    // Avisamos a la Driver App que liberamos el asiento
+    // 1. Actualizamos el estado a CANCELED en nuestra base de datos local
+    await prisma.reservation.updateMany({
+      where: { id: id, passenger_user_id: actionUserId || '' },
+      data: { reservation_status: 'CANCELED' }
+    })
+
+    // 2. Avisamos a la Driver App que liberamos el asiento
     if (reserva?.pool_id) {
       try {
         await cancelReservation(reserva.pool_id, id)
@@ -189,11 +195,6 @@ export default async function MisViajesPage({
       }
     }
 
-    // Actualizamos el estado en nuestra base de datos
-    await prisma.reservation.updateMany({
-      where: { id: id, passenger_user_id: actionUserId || '' },
-      data: { reservation_status: 'CANCELED' }
-    })
     revalidatePath('/mis-viajes')
     redirect(`/mis-viajes?toast=Viaje%20cancelado&toastType=error#viaje-${id}`)
   }

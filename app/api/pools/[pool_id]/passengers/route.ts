@@ -32,7 +32,11 @@ export async function GET(
     // Armamos el filtro dinámico para Prisma
     const whereClause: any = { pool_id: pool_id };
     if (paymentStatusFilter) whereClause.payment_status = paymentStatusFilter;
-    if (reservationStatusFilter) whereClause.reservation_status = reservationStatusFilter;
+    if (reservationStatusFilter) {
+      whereClause.reservation_status = reservationStatusFilter;
+    } else {
+      whereClause.reservation_status = { not: 'CANCELED' };
+    }
 
     const reservas = await prisma.reservation.findMany({
       where: whereClause,
