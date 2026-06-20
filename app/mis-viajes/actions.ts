@@ -2,7 +2,7 @@
 
 import { getDriverAppPoolStatus } from '@/lib/api'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@clerk/nextjs/server'
+import { auth, createClerkClient } from '@clerk/nextjs/server'
 import { revalidatePath } from 'next/cache'
 
 export async function getPoolStatusAction(poolId: string) {
@@ -15,7 +15,7 @@ export async function getPoolStatusAction(poolId: string) {
 }
 
 export async function saveProfileAction(formData: FormData) {
-  const { userId } = await auth()
+  const { userId, sessionClaims } = await auth()
   if (!userId) throw new Error("No autenticado")
 
   const fullName = formData.get('fullName') as string
@@ -43,6 +43,20 @@ export async function saveProfileAction(formData: FormData) {
       company_code: companyCode?.trim() || null
     }
   })
+
+  // Asignar el rol 'rider' en Clerk si no es admin
+  try {
+    if (sessionClaims?.role !== 'admin') {
+      const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+      await clerkClient.users.updateUserMetadata(userId, {
+        publicMetadata: {
+          role: 'rider'
+        }
+      })
+    }
+  } catch (clerkErr) {
+    console.error("Error al guardar metadata de rol en Clerk:", clerkErr)
+  }
 
   revalidatePath('/')
   revalidatePath('/mis-viajes')

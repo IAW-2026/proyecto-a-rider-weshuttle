@@ -511,6 +511,7 @@ export default async function MisViajesPage({
                       <TripTracker 
                         poolId={reserva.pool_id} 
                         passengerUserId={reserva.passenger_user_id} 
+                        reservationId={reserva.id}
                       />
                     )}
                   </div>
@@ -563,7 +564,7 @@ export default async function MisViajesPage({
                       )}
 
                       {!isPast && !isLocked && ['PENDING_PAYMENT', 'PENDING_DRIVER', 'CONFIRMED'].includes(reserva.reservation_status) && !['IN_PROGRESS', 'COMPLETED'].includes(reserva.poolStatus) && (
-                        <form action={cancelarReserva}>
+                        <form action={cancelarReserva} id={`cancel-form-${reserva.id}`}>
                           <input type="hidden" name="reserva_id" value={reserva.id} />
                           <button type="submit" className="w-full py-2.5 rounded-[8px] bg-[#EF4444]/10 text-[#DC2626] border border-[#EF4444]/20 text-[12px] font-bold uppercase tracking-widest hover:bg-[#EF4444]/20 transition-colors">
                             Cancelar Viaje

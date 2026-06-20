@@ -49,13 +49,19 @@ export default async function NuevaReservaPage({
     const actionUser = await currentUser()
     if (!actionUserId || !actionUser) return
 
-    // Regla de Negocio: La brecha horaria permitida es desde 24 horas hasta 1 hora antes de la partida.
+    // Regla de Negocio: La brecha horaria permitida es desde 24 horas hasta 2 horas antes de la partida.
     const horario = `${fecha}T${hora}`;
     const fechaViaje = new Date(`${horario}-03:00`)
     const ahora = Date.now()
-    const unaHoraEnMs = 60 * 60 * 1000 - (5 * 60 * 1000) // 1h con 5 mins de margen
+    const dosHorasEnMs = 2 * 60 * 60 * 1000 - (5 * 60 * 1000) // 2h con 5 mins de margen
     const veinticuatroHorasEnMs = 24 * 60 * 60 * 1000
-    if (fechaViaje.getTime() < ahora + unaHoraEnMs || fechaViaje.getTime() > ahora + veinticuatroHorasEnMs) {
+
+    const minutos = fechaViaje.getMinutes();
+    if (minutos !== 0 && minutos !== 30) {
+      redirect('/reservar?toast=Error:%20Los%20viajes%20deben%20ser%20en%20punto%20o%20media%20hora&toastType=error');
+    }
+
+    if (fechaViaje.getTime() < ahora + dosHorasEnMs || fechaViaje.getTime() > ahora + veinticuatroHorasEnMs) {
       redirect('/reservar?toast=Error:%20Horario%20invalido&toastType=error');
     }
 
@@ -132,8 +138,13 @@ export default async function NuevaReservaPage({
 
   // Calculamos la hora mínima y máxima permitida para el input date
   const ahoraUtc = new Date()
-  const minArgConMargen = new Date(ahoraUtc.getTime() - 3 * 60 * 60 * 1000 + 1 * 60 * 60 * 1000) 
-  const minDateTime = minArgConMargen.toISOString().slice(0, 16)
+  const minArgConMargen = new Date(ahoraUtc.getTime() - 3 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000) 
+  
+  // Redondear minArgConMargen hacia arriba al próximo intervalo de 30 minutos (:00 o :30)
+  const intervaloMs = 30 * 60 * 1000;
+  const minArgRedondeado = new Date(Math.ceil(minArgConMargen.getTime() / intervaloMs) * intervaloMs);
+  
+  const minDateTime = minArgRedondeado.toISOString().slice(0, 16)
   const maxArgConMargen = new Date(ahoraUtc.getTime() - 3 * 60 * 60 * 1000 + 24 * 60 * 60 * 1000)
   const maxDateTime = maxArgConMargen.toISOString().slice(0, 16)
 

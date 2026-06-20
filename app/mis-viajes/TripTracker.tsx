@@ -6,14 +6,28 @@ import { getPoolStatusAction } from './actions'
 interface TripTrackerProps {
   poolId: string
   passengerUserId: string
+  reservationId: string
 }
 
-export default function TripTracker({ poolId, passengerUserId }: TripTrackerProps) {
+export default function TripTracker({ poolId, passengerUserId, reservationId }: TripTrackerProps) {
   const [status, setStatus] = useState<string>('ASSIGNED')
   const [targetUserId, setTargetUserId] = useState<string | null>(null)
   const [hito, setHito] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+
+  // Ocultar el formulario de cancelación en tiempo real si el viaje se inició o completó
+  useEffect(() => {
+    const cancelForm = document.getElementById(`cancel-form-${reservationId}`)
+    if (cancelForm) {
+      if (['IN_PROGRESS', 'COMPLETED', 'CANCELED'].includes(status)) {
+        cancelForm.style.display = 'none'
+      } else {
+        // Restaurar si el estado no está en pleno viaje/finalizado
+        cancelForm.style.display = 'block'
+      }
+    }
+  }, [status, reservationId])
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout
