@@ -68,6 +68,35 @@ export default async function MisViajesPage({
     ]
   })
 
+  // Obtenemos el estado real en la Driver App para cada viaje activo que posea un pool_id
+  const viajesActivosCompletos: any[] = await Promise.all(
+    viajesActivos.map(async (reserva) => {
+      let poolStatus = 'ASSIGNED';
+      if (reserva.pool_id) {
+        try {
+          const statusData = await getDriverAppPoolStatus(reserva.pool_id);
+          poolStatus = statusData.status || 'ASSIGNED';
+        } catch (err) {
+          console.error(`Error al obtener estado real del pool ${reserva.pool_id}:`, err);
+        }
+      }
+      return {
+        ...reserva,
+        poolStatus
+      };
+    })
+  );
+
+  // Clasificamos en memoria: si ya se completó o canceló en la Driver App, no va en activos
+  // Pero si estamos viendo el detalle de un viaje específico (viajeIdParam está definido), no filtramos nada para poder renderizarlo.
+  const viajesActivosConEstado = viajesActivosCompletos.filter(
+    viaje => viajeIdParam || !['COMPLETED', 'CANCELED'].includes(viaje.poolStatus)
+  );
+
+  const recientementeFinalizados = viajesActivosCompletos.filter(
+    viaje => !viajeIdParam && ['COMPLETED', 'CANCELED'].includes(viaje.poolStatus)
+  );
+
   let historial: any[] = [];
   let totalHistorial = 0;
 
@@ -98,9 +127,18 @@ export default async function MisViajesPage({
           ]
         }
       })
-    ])
-    historial = h;
-    totalHistorial = t;
+    ]);
+
+    // Unimos los viajes recientemente finalizados en memoria con el historial
+    const dbHistorialIds = new Set(h.map(item => item.id));
+    const finalizadosUnicos = recientementeFinalizados.filter(item => !dbHistorialIds.has(item.id));
+    const finalizadosMapeados = finalizadosUnicos.map(item => ({
+      ...item,
+      reservation_status: item.poolStatus === 'CANCELED' ? 'CANCELED' : 'CONFIRMED'
+    }));
+
+    historial = [...finalizadosMapeados, ...h];
+    totalHistorial = t + finalizadosUnicos.length;
   }
 
   const totalPages = Math.ceil(totalHistorial / ITEMS_PER_PAGE)
@@ -125,6 +163,21 @@ export default async function MisViajesPage({
     const isLocked = new Date(reserva.departure_time).getTime() - new Date().getTime() <= 60 * 60 * 1000;
     if (isLocked) {
       redirect(`/mis-viajes?toast=Error:%20Pool%20Cerrado&toastType=error#viaje-${id}`);
+    }
+
+    // Consultamos el estado real del pool para ver si ya inició o finalizó
+    if (reserva?.pool_id) {
+      try {
+        const statusData = await getDriverAppPoolStatus(reserva.pool_id);
+        if (statusData && ['IN_PROGRESS', 'COMPLETED'].includes(statusData.status)) {
+          redirect(`/mis-viajes?toast=Error:%20El%20viaje%20ya%20se%20encuentra%20en%20curso%20o%20finalizado&toastType=error#viaje-${id}`);
+        }
+      } catch (err: any) {
+        if (err.digest?.includes('NEXT_REDIRECT') || err.message?.includes('NEXT_REDIRECT')) {
+          throw err;
+        }
+        console.error("Error al verificar estado del pool antes de cancelar:", err);
+      }
     }
 
     // Avisamos a la Driver App que liberamos el asiento
@@ -384,7 +437,7 @@ export default async function MisViajesPage({
               <p className="text-[#475569] text-[16px] mt-1">{viajeIdParam ? 'Información operativa específica de tu viaje.' : 'Gestión y estado en tiempo real de tus trayectos corporativos.'}</p>
             </header>
 
-            {viajesActivos.map((reserva) => {
+            {viajesActivosConEstado.map((reserva) => {
               const isPast = new Date(reserva.departure_time) < ahora;
               const isLocked = new Date(reserva.departure_time).getTime() - ahora.getTime() <= 60 * 60 * 1000 && !isPast;
               return (
@@ -509,7 +562,7 @@ export default async function MisViajesPage({
                         </form>
                       )}
 
-                      {!isPast && !isLocked && ['PENDING_PAYMENT', 'PENDING_DRIVER', 'CONFIRMED'].includes(reserva.reservation_status) && (
+                      {!isPast && !isLocked && ['PENDING_PAYMENT', 'PENDING_DRIVER', 'CONFIRMED'].includes(reserva.reservation_status) && !['IN_PROGRESS', 'COMPLETED'].includes(reserva.poolStatus) && (
                         <form action={cancelarReserva}>
                           <input type="hidden" name="reserva_id" value={reserva.id} />
                           <button type="submit" className="w-full py-2.5 rounded-[8px] bg-[#EF4444]/10 text-[#DC2626] border border-[#EF4444]/20 text-[12px] font-bold uppercase tracking-widest hover:bg-[#EF4444]/20 transition-colors">
@@ -538,7 +591,7 @@ export default async function MisViajesPage({
               )
             })}
 
-            {viajesActivos.length === 0 && (
+            {viajesActivosConEstado.length === 0 && (
               <div className="bg-[#FFFFFF] p-12 rounded-[12px] border border-[#D8DADC] border-dashed text-center">
                 <span className="material-symbols-outlined text-4xl text-[#D8DADC] mb-4 block">directions_bus</span>
                 <h3 className="text-[20px] font-bold text-[#0A192F] mb-2">{viajeIdParam ? 'Viaje no encontrado' : 'No tienes viajes activos'}</h3>

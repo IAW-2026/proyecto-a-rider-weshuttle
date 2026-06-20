@@ -208,29 +208,29 @@ export default async function VistaPublicaViajes() {
         {/* SECCIÓN DE BENEFICIOS / INFO CORPORATIVA */}
         <section className="mt-12 mb-8">
           <div className="mb-6">
-            <h3 className="text-[20px] font-bold text-[#0A192F]">Ventajas de viajar en Pool</h3>
+            <h3 className="text-[20px] font-bold text-[#0A192F]">La Experiencia WeShuttle</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col items-start cursor-default">
-              <div className="w-10 h-10 rounded-full bg-[#10B981]/10 flex items-center justify-center mb-4 text-[#10B981]">
-                <span className="material-symbols-outlined text-[20px]">eco</span>
+            <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col items-start cursor-default hover:border-[#0A192F]/30 transition-all duration-300">
+              <div className="w-10 h-10 rounded-full bg-[#3B82F6]/10 flex items-center justify-center mb-4 text-[#2563EB]">
+                <span className="material-symbols-outlined text-[20px]">self_improvement</span>
               </div>
-              <h4 className="text-[16px] font-bold text-[#0A192F] mb-2">Huella de Carbono</h4>
-              <p className="text-[13px] text-[#475569] leading-relaxed">Al compartir tu viaje, reducís significativamente las emisiones de CO2 en los accesos al polo industrial.</p>
+              <h4 className="text-[16px] font-bold text-[#0A192F] mb-2">Viajá en primera clase</h4>
+              <p className="text-[13px] text-[#475569] leading-relaxed">Olvidate del estrés de manejar en hora pico. Subite, conectate al Wi-Fi de la unidad y empezá tu jornada laboral relajado/a.</p>
             </div>
-            <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col items-start cursor-default">
-              <div className="w-10 h-10 rounded-full bg-[#3B82F6]/10 flex items-center justify-center mb-4 text-[#3B82F6]">
-                <span className="material-symbols-outlined text-[20px]">savings</span>
+            <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col items-start cursor-default hover:border-[#0A192F]/30 transition-all duration-300">
+              <div className="w-10 h-10 rounded-full bg-[#10B981]/10 flex items-center justify-center mb-4 text-[#059669]">
+                <span className="material-symbols-outlined text-[20px]">payments</span>
               </div>
-              <h4 className="text-[16px] font-bold text-[#0A192F] mb-2">Ahorro Garantizado</h4>
-              <p className="text-[13px] text-[#475569] leading-relaxed">Pagás un precio tope inicial y recibís crédito a favor si la combi logra mayor ocupación en el trayecto.</p>
+              <h4 className="text-[16px] font-bold text-[#0A192F] mb-2">Economía compartida real</h4>
+              <p className="text-[13px] text-[#475569] leading-relaxed">El pool dinámico te premia de verdad. Cuantos más compañeros compartan la ruta, más crédito acumulás a favor para tus siguientes traslados.</p>
             </div>
-            <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col items-start cursor-default">
-              <div className="w-10 h-10 rounded-full bg-[#F59E0B]/10 flex items-center justify-center mb-4 text-[#F59E0B]">
-                <span className="material-symbols-outlined text-[20px]">work_history</span>
+            <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col items-start cursor-default hover:border-[#0A192F]/30 transition-all duration-300">
+              <div className="w-10 h-10 rounded-full bg-[#F59E0B]/10 flex items-center justify-center mb-4 text-[#D97706]">
+                <span className="material-symbols-outlined text-[20px]">forest</span>
               </div>
-              <h4 className="text-[16px] font-bold text-[#0A192F] mb-2">Puntualidad B2B</h4>
-              <p className="text-[13px] text-[#475569] leading-relaxed">Rutas de transporte optimizadas y choferes profesionales para asegurar que llegues a tu turno a tiempo.</p>
+              <h4 className="text-[16px] font-bold text-[#0A192F] mb-2">Sustentabilidad en movimiento</h4>
+              <p className="text-[13px] text-[#475569] leading-relaxed">Cada combi llena equivale a retirar hasta 14 autos particulares de los accesos al Polo. Menos embotellamientos, más planeta.</p>
             </div>
           </div>
         </section>
