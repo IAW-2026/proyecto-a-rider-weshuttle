@@ -21,7 +21,6 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
    ========================================================================= */
 
 // 1. GET /api/pools/search
-// 1. GET /api/pools/search
 export async function searchDriverAppPools(destination_id: string, departure_time: string) {
   const driverUrl = process.env.NEXT_PUBLIC_DRIVER_APP_URL || '';
   try {
@@ -188,7 +187,7 @@ export async function fetchPaymentsAppPricing(origin_lat: number, origin_lng: nu
 export async function createPaymentsCheckout(reservation_id: string, pool_id: string, passenger_user_id: string, max_price: number, currency: string = "ARS") {
   const paymentsUrl = process.env.NEXT_PUBLIC_PAYMENTS_APP_URL || '';
   const riderUrl = process.env.NEXT_PUBLIC_RIDER_APP_URL || '';
-  
+
   const body = {
     pool_id,
     passenger_user_id,

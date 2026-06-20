@@ -35,6 +35,18 @@ export default async function MisViajesPage({
   const viajeIdParam = typeof params?.viaje_id === 'string' ? params.viaje_id : undefined;
   const fromParam = typeof params?.from === 'string' ? params.from : undefined;
 
+  // Obtenemos los pool_ids finalizados basados en las notificaciones de feedback recibidas
+  const feedbackNotifications = await prisma.passengerNotification.findMany({
+    where: {
+      passenger_user_id: userId,
+      type: 'FEEDBACK_AVAILABLE'
+    },
+    select: { pool_id: true }
+  })
+  const completedPoolIds = feedbackNotifications
+    .map(n => n.pool_id)
+    .filter((id): id is string => typeof id === 'string')
+
   // Obtenemos los viajes activos del usuario (o el viaje específico del detalle)
   const viajesActivos = await prisma.reservation.findMany({
     where: viajeIdParam
@@ -42,7 +54,11 @@ export default async function MisViajesPage({
       : {
         passenger_user_id: userId,
         reservation_status: { in: ['PENDING_PAYMENT', 'PENDING_DRIVER', 'CONFIRMED'] },
-        departure_time: { gte: ahora }
+        departure_time: { gte: ahora },
+        OR: [
+          { pool_id: null },
+          { pool_id: { notIn: completedPoolIds } }
+        ]
       },
     include: { destination: true },
     orderBy: [
@@ -60,7 +76,11 @@ export default async function MisViajesPage({
       prisma.reservation.findMany({
         where: {
           passenger_user_id: userId,
-          OR: [{ departure_time: { lt: ahora } }, { reservation_status: 'CANCELED' }]
+          OR: [
+            { departure_time: { lt: ahora } },
+            { reservation_status: 'CANCELED' },
+            { pool_id: { in: completedPoolIds } }
+          ]
         },
         include: { destination: true },
         orderBy: { id: 'desc' },
@@ -70,7 +90,11 @@ export default async function MisViajesPage({
       prisma.reservation.count({
         where: {
           passenger_user_id: userId,
-          OR: [{ departure_time: { lt: ahora } }, { reservation_status: 'CANCELED' }]
+          OR: [
+            { departure_time: { lt: ahora } },
+            { reservation_status: 'CANCELED' },
+            { pool_id: { in: completedPoolIds } }
+          ]
         }
       })
     ])
@@ -104,7 +128,11 @@ export default async function MisViajesPage({
 
     // Avisamos a la Driver App que liberamos el asiento
     if (reserva?.pool_id) {
-      await cancelReservation(reserva.pool_id, id)
+      try {
+        await cancelReservation(reserva.pool_id, id)
+      } catch (err) {
+        console.error("Error al cancelar la reserva en Driver App:", err);
+      }
     }
 
     // Actualizamos el estado en nuestra base de datos
@@ -455,7 +483,7 @@ export default async function MisViajesPage({
                       </div>
 
                       {/* Acciones de Flujo de Negocio */}
-                      {!isPast && reserva.payment_status === 'UNPAID' && (
+                      {!isPast && reserva.payment_status === 'UNPAID' && reserva.reservation_status === 'PENDING_PAYMENT' && (
                         <form action={simularPago}>
                           <input type="hidden" name="reserva_id" value={reserva.id} />
                           <button type="submit" className="w-full py-2.5 rounded-[8px] bg-[#3B82F6] text-white text-[12px] font-bold uppercase tracking-widest hover:bg-[#2563EB] transition-colors shadow-sm mb-2">
