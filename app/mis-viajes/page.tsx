@@ -509,8 +509,8 @@ export default async function MisViajesPage({
                         </div>
                       </div>
                     )}
-                    {/* Seguimiento en vivo si el pool está asignado/confirmado */}
-                    {reserva.pool_id && ['CONFIRMED', 'PENDING_DRIVER'].includes(reserva.reservation_status) && (
+                    {/* Seguimiento en vivo si el pool está asignado/confirmado y no expiró sin confirmarse */}
+                    {reserva.pool_id && ['CONFIRMED', 'PENDING_DRIVER'].includes(reserva.reservation_status) && !(isPast && reserva.reservation_status === 'PENDING_DRIVER') && (
                       <TripTracker 
                         poolId={reserva.pool_id} 
                         passengerUserId={reserva.passenger_user_id} 
@@ -582,10 +582,17 @@ export default async function MisViajesPage({
                         </div>
                       )}
 
-                      {isPast && ['PENDING_PAYMENT', 'PENDING_DRIVER', 'CONFIRMED'].includes(reserva.reservation_status) && (
-                        <div className="bg-[#F7F9FB] border border-[#D8DADC] rounded-[8px] p-3 text-center shadow-sm">
-                          <span className="text-[11px] font-bold text-[#EF4444] uppercase tracking-widest">Viaje Expirado</span>
-                          <p className="text-[10px] text-[#475569] mt-1 leading-tight">La fecha de partida ya pasó. No se pueden realizar acciones.</p>
+                      {isPast && reserva.reservation_status === 'CONFIRMED' && (
+                        <div className="bg-[#10B981]/10 border border-[#10B981]/20 rounded-[8px] p-3 text-center shadow-sm">
+                          <span className="text-[11px] font-bold text-[#047857] uppercase tracking-widest">Viaje Realizado</span>
+                          <p className="text-[10px] text-[#047857] mt-1 leading-tight">Este viaje se completó con éxito.</p>
+                        </div>
+                      )}
+
+                      {isPast && ['PENDING_PAYMENT', 'PENDING_DRIVER'].includes(reserva.reservation_status) && (
+                        <div className="bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-[8px] p-3 text-center shadow-sm">
+                          <span className="text-[11px] font-bold text-[#B91C1C] uppercase tracking-widest">Viaje Expirado</span>
+                          <p className="text-[10px] text-[#B91C1C] mt-1 leading-tight">La fecha de partida ya pasó sin completarse la reserva.</p>
                         </div>
                       )}
                     </div>
@@ -621,8 +628,14 @@ export default async function MisViajesPage({
                         {' • '}
                         {new Date(reserva.departure_time).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' })} hs
                       </span>
-                      <span className={`text-[10px] font-bold uppercase tracking-widest ${reserva.reservation_status === 'CANCELED' ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
-                        {reserva.reservation_status === 'CANCELED' ? 'Cancelado' : 'Completado'}
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                        reserva.reservation_status === 'CANCELED' ? 'text-[#EF4444]' :
+                        reserva.reservation_status === 'CONFIRMED' ? 'text-[#10B981]' :
+                        'text-[#64748B]'
+                      }`}>
+                        {reserva.reservation_status === 'CANCELED' ? 'Cancelado' :
+                         reserva.reservation_status === 'CONFIRMED' ? 'Completado' :
+                         'No realizado'}
                       </span>
                     </div>
                     <h3 className="text-[16px] font-bold text-[#0A192F] mb-4 truncate">{reserva.destination.name}</h3>
