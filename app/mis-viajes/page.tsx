@@ -113,7 +113,7 @@ export default async function MisViajesPage({
           ]
         },
         include: { destination: true },
-        orderBy: { id: 'desc' },
+        orderBy: { departure_time: 'desc' },
         take: ITEMS_PER_PAGE,
         skip: skip
       }),
@@ -137,7 +137,9 @@ export default async function MisViajesPage({
       reservation_status: item.poolStatus === 'CANCELED' ? 'CANCELED' : 'CONFIRMED'
     }));
 
-    historial = [...finalizadosMapeados, ...h];
+    // Combinamos y ordenamos todo de forma descendente por fecha de partida (más recientes primero)
+    const combined = [...finalizadosMapeados, ...h];
+    historial = combined.sort((a, b) => new Date(b.departure_time).getTime() - new Date(a.departure_time).getTime());
     totalHistorial = t + finalizadosUnicos.length;
   }
 
@@ -614,7 +616,11 @@ export default async function MisViajesPage({
                 {historial.map((reserva) => (
                   <div key={reserva.id} className="bg-[#FFFFFF] border border-[#D8DADC] rounded-[12px] p-5 shadow-sm hover:border-[#0A192F]/30 transition-colors">
                     <div className="flex justify-between items-start mb-2">
-                      <span className="text-[12px] font-bold text-[#475569]">{new Date(reserva.departure_time).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Argentina/Buenos_Aires' }).toUpperCase()}</span>
+                      <span className="text-[12px] font-bold text-[#475569]">
+                        {new Date(reserva.departure_time).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Argentina/Buenos_Aires' }).toUpperCase()}
+                        {' • '}
+                        {new Date(reserva.departure_time).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' })} hs
+                      </span>
                       <span className={`text-[10px] font-bold uppercase tracking-widest ${reserva.reservation_status === 'CANCELED' ? 'text-[#EF4444]' : 'text-[#10B981]'}`}>
                         {reserva.reservation_status === 'CANCELED' ? 'Cancelado' : 'Completado'}
                       </span>
