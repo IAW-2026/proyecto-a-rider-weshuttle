@@ -21,6 +21,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "NOT_FOUND", message: "No existe el pasajero o el pool indicado." }, { status: 404 });
     }
 
+    // Evitamos notificaciones duplicadas de calificación para el mismo pool y usuario
+    const existente = await prisma.passengerNotification.findFirst({
+      where: {
+        passenger_user_id: body.passenger_user_id,
+        pool_id: body.pool_id,
+        type: 'FEEDBACK_AVAILABLE'
+      }
+    });
+
+    if (existente) {
+      return NextResponse.json({ notification_sent: true, status: "ALREADY_EXISTS" });
+    }
+
     // Registramos la notificación para el pasajero
     await prisma.passengerNotification.create({
       data: {
