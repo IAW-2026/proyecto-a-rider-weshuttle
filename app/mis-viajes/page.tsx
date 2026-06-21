@@ -7,6 +7,7 @@ import { createDriverAppPool, getDriverAppAssignedDriver, fetchPaymentsAppPricin
 import { UserButton } from "@clerk/nextjs"
 import TripTracker from './TripTracker'
 import Navbar from '@/app/ui/Navbar'
+import CalificarButton from './CalificarButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -803,9 +804,10 @@ export default async function MisViajesPage({
 
                   <div className="flex justify-between items-center pt-4 border-t border-[#D8DADC]">
                     {reserva.reservation_status === 'CONFIRMED' ? (
-                      <Link href={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || '#'}/?return_url=${process.env.NEXT_PUBLIC_RIDER_APP_URL || '#'}`} className="text-[12px] font-bold text-[#F59E0B] hover:underline flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[16px] fill-current">star</span> Calificar
-                      </Link>
+                      <CalificarButton 
+                        reservaId={reserva.id} 
+                        feedbackUrl={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || '#'}/?return_url=${process.env.NEXT_PUBLIC_RIDER_APP_URL || '#'}`} 
+                      />
                     ) : (
                       <span className="text-[12px] text-[#475569]">Sin acciones</span>
                     )}
