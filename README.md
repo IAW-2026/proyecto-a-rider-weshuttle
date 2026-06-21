@@ -35,8 +35,9 @@ En este ecosistema, la **Rider App** actúa como la fuente de la verdad para el 
 
 ## 5. Notas y comentarios para la corrección
 
-* **Microservicios y APIs Externas:** Al ser parte de un ecosistema distribuido, la comunicación con la *Driver App*, *Payments App* y *Feedback App* se encuentra **mockeada** (`lib/api.ts`). Se simulan las interacciones asíncronas y los Webhooks mediante Server Actions para validar el ciclo de vida de la reserva, quedando pendiente la integración de las URLs productivas definitivas.
+* **Microservicios y APIs Externas:** Al ser parte de un ecosistema distribuido, la comunicación con la *Driver App*, *Payments App* y *Feedback App* se encuentra **completamente integrada y operativa en tiempo real** con los servidores de producción provistos por los otros equipos (`lib/api.ts`). Se realizan peticiones HTTP reales utilizando tokens de autorización de Clerk y se reciben resultados de pagos y notificaciones de logística a través de Webhooks funcionales en la nube.
 * **Diseño del CRUD y Arquitectura:** El CRUD está distribuido lógicamente. El Administrador de la Rider App gestiona el catálogo de Destinos (U/R) y audita Pasajeros y Reservas, dejando la logística 100% a cargo de la *Driver App*. El Pasajero gestiona sus reservas (C/R/D). No se permite editar una reserva confirmada o crear reservas a mano para proteger el flujo B2B.
 * **Borrado Lógico (Soft Delete):** La cancelación de viajes no elimina físicamente la reserva de la base de datos, sino que actualiza su estado a `CANCELED` para no perder la trazabilidad financiera, las métricas del negocio y el historial visible del usuario.
 * **Inmutabilidad y Snapshots:** La tabla `Reservation` guarda "fotos" (snapshots) del `max_price` de la cotización y de los datos de la unidad asignada, asegurando que el comprobante de viaje del pasajero quede inalterable ante futuros cambios en el sistema.
-* **Seguridad de APIs Propias:** Los endpoints REST internos expuestos se encuentran funcionales para consumo, quedando programado para una próxima iteración la implementación de seguridad mediante API Keys.
+* **Seguridad de APIs Propias:** Los endpoints REST internos expuestos se encuentran funcionales para consumo, y han sido validados para responder de acuerdo a los contratos acordados.
+
