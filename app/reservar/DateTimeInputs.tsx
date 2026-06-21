@@ -57,19 +57,23 @@ export default function DateTimeInputs({ minDate, maxDate, minTime, maxTime }: {
   const selectedParts = getSelectedParts(hora);
 
   return (
-    <div className="grid grid-cols-2 gap-4 md:gap-6">
+    <div className="flex flex-col gap-6 w-full">
+      
+      {/* SELECCIÓN DE DÍA */}
       <div className="w-full">
         <label htmlFor="fecha" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Día</label>
         <div className="relative">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">calendar_today</span>
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569] z-10 pointer-events-none">calendar_today</span>
           <input 
             type="date" id="fecha" name="fecha" required 
             min={minDate} max={maxDate} value={fecha} onChange={(e) => setFecha(e.target.value)}
-            className="w-full appearance-none min-w-0 max-w-full h-[56px] pl-10 pr-2 md:pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F]" 
+            className="w-full appearance-none min-w-0 max-w-full h-[56px] pl-10 pr-10 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] cursor-pointer" 
           />
+          <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#475569] z-10 pointer-events-none">expand_more</span>
         </div>
       </div>
       
+      {/* SELECCIÓN DE HORA */}
       <div className="w-full relative">
         <label htmlFor="hora" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Hora</label>
         <div className="relative">
@@ -90,7 +94,7 @@ export default function DateTimeInputs({ minDate, maxDate, minTime, maxTime }: {
                 {selectedParts.ampm}
               </span>
             </div>
-            <span className="material-symbols-outlined text-[#475569] transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }}>expand_more</span>
+            <span className="material-symbols-outlined text-[#475569] transition-transform duration-200 z-10 pointer-events-none" style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }}>expand_more</span>
           </button>
 
           {/* Menú desplegable flotante personalizado */}
@@ -141,7 +145,8 @@ export default function DateTimeInputs({ minDate, maxDate, minTime, maxTime }: {
           {fecha === minDate ? `Permitido desde las ${formatAMPM(minTime)} en adelante.` : `Permitido hasta las ${formatAMPM(maxTime)}.`}
         </p>
       </div>
-      <p className="text-[11px] text-[#475569] col-span-2 mt-1 mb-2">Las reservas corporativas se realizan con 2 a 24 horas de anticipación.</p>
+      
+      <p className="text-[11px] text-[#475569] mt-1 mb-2">Las reservas corporativas se realizan con 2 a 24 horas de anticipación.</p>
     </div>
   )
 }

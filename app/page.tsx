@@ -190,62 +190,75 @@ export default async function VistaPublicaViajes() {
           <p className="text-[#475569] text-[16px] max-w-2xl">Gestiona tus traslados corporativos con precisión y facilidad. Tu asiento asegurado en las mejores unidades.</p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-start">
-          
-          {/* HERO BANNER */}
-          <section className={`bg-[#0A192F] text-[#F7F9FB] p-8 md:p-10 rounded-xl shadow-sm flex flex-col items-start text-left justify-center relative overflow-hidden ${userId ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
-            <span className="material-symbols-outlined absolute -right-10 -bottom-10 text-[180px] opacity-5 pointer-events-none">directions_bus</span>
-            <h2 className="text-[32px] font-bold tracking-tight mb-3 relative z-10">¿A dónde viajamos hoy?</h2>
-            <p className="text-[16px] text-[#D8DADC] mb-8 max-w-xl leading-relaxed relative z-10">Reserva tu asiento en nuestras combis corporativas con hasta 24hs de anticipación y ahorrá compartiendo el viaje.</p>
-            <Link href="/reservar" className="bg-[#FFFFFF] text-[#0A192F] px-8 py-3.5 rounded-lg text-[12px] font-bold uppercase tracking-widest hover:bg-gray-100 transition-colors shadow-sm text-center w-full sm:w-auto relative z-10">
-              Agendar traslado
-            </Link>
-          </section>
+        {/* HERO BANNER - ANCHO COMPLETO */}
+        <section className="bg-[#0A192F] text-[#F7F9FB] p-8 md:p-10 rounded-xl shadow-sm flex flex-col items-start text-left justify-center relative overflow-hidden w-full mb-8">
+          <span className="material-symbols-outlined absolute -right-10 -bottom-10 text-[180px] opacity-5 pointer-events-none">directions_bus</span>
+          <h2 className="text-[32px] font-bold tracking-tight mb-3 relative z-10">¿A dónde viajamos hoy?</h2>
+          <p className="text-[16px] text-[#D8DADC] mb-8 max-w-xl leading-relaxed relative z-10">Reserva tu asiento en nuestras combis corporativas con hasta 24hs de anticipación y ahorrá compartiendo el viaje.</p>
+          <Link href="/reservar" className="bg-[#FFFFFF] text-[#0A192F] px-8 py-3.5 rounded-lg text-[12px] font-bold uppercase tracking-widest hover:bg-gray-100 transition-colors shadow-sm text-center w-full sm:w-auto relative z-10">
+            Agendar traslado
+          </Link>
+        </section>
 
-          {/* WIDGETS DE USUARIO */}
-          {userId && (
-            <div className="flex flex-col gap-6 lg:col-span-1">
-              
-              {/* Widget: Próximo Viaje */}
-              {proximoViaje && (
-                <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col justify-center hover:border-[#0A192F]/30 transition-colors flex-1">
+        {/* WIDGETS DE USUARIO - GRILA DE 3 COLUMNAS SIMÉTRICA */}
+        {userId && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            
+            {/* Columna 1: Próximo Viaje o Placeholder */}
+            {proximoViaje ? (
+              <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col justify-between hover:border-[#0A192F]/30 transition-colors h-full min-h-[220px]">
+                <div>
                   <p className="text-[12px] font-bold uppercase tracking-widest text-[#475569] mb-3">Tu Próximo Viaje</p>
-                  <div className="flex flex-col gap-3">
-                    <div className="overflow-hidden">
-                      <h3 className="text-[18px] font-bold text-[#0A192F] leading-tight truncate">{proximoViaje.pickup_address}</h3>
-                      <h3 className="text-[18px] font-bold text-[#475569] leading-tight truncate">→ {proximoViaje.destination.name}</h3>
-                      <p className="text-[13px] text-[#475569] mt-3 flex items-center gap-1.5 font-medium">
-                        <span className="material-symbols-outlined text-[16px]">schedule</span> {new Date(proximoViaje.departure_time).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' })} hs
-                      </p>
-                    </div>
-                    <Link href={`/mis-viajes?viaje_id=${proximoViaje.id}&from=home`} className="mt-1 inline-flex items-center justify-center gap-1 text-[#0A192F] text-[12px] font-bold uppercase hover:bg-[#e2e8f0] bg-[#F7F9FB] border border-[#D8DADC] px-4 py-2.5 rounded-lg transition-colors w-full">
-                      Ver detalles <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                    </Link>
+                  <div className="overflow-hidden">
+                    <h3 className="text-[18px] font-bold text-[#0A192F] leading-tight truncate">{proximoViaje.pickup_address}</h3>
+                    <h3 className="text-[18px] font-bold text-[#475569] leading-tight truncate">→ {proximoViaje.destination.name}</h3>
+                    <p className="text-[13px] text-[#475569] mt-3 flex items-center gap-1.5 font-medium">
+                      <span className="material-symbols-outlined text-[16px]">schedule</span> {new Date(proximoViaje.departure_time).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' })} hs
+                    </p>
                   </div>
                 </div>
-              )}
-              
-              {/* Widgets de Estadísticas Pequeñas */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-4 shadow-sm hover:border-[#0A192F]/30 transition-colors flex flex-col justify-center">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] mb-1">Viajes</p>
-                  <h3 className="text-[24px] font-bold text-[#0A192F] leading-none">{viajesRealizados.toString().padStart(2, '0')}</h3>
-                </div>
-                
-                <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-4 shadow-sm hover:border-[#0A192F]/30 transition-colors relative overflow-hidden flex flex-col justify-center">
-                  <span className="material-symbols-outlined absolute -bottom-3 -right-2 text-[64px] text-[#10B981] opacity-5">account_balance_wallet</span>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#10B981] mb-1">Ahorro a favor</p>
-                  <h3 className="text-[24px] font-bold text-[#0A192F] leading-none">${creditData.available_credit.toLocaleString('es-AR')}</h3>
-                </div>
+                <Link href={`/mis-viajes?viaje_id=${proximoViaje.id}&from=home`} className="mt-4 inline-flex items-center justify-center gap-1 text-[#0A192F] text-[12px] font-bold uppercase hover:bg-[#e2e8f0] bg-[#F7F9FB] border border-[#D8DADC] px-4 py-2.5 rounded-lg transition-colors w-full">
+                  Ver detalles <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                </Link>
               </div>
+            ) : (
+              <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-6 shadow-sm flex flex-col justify-between hover:border-[#0A192F]/30 transition-colors h-full min-h-[220px]">
+                <div>
+                  <p className="text-[12px] font-bold uppercase tracking-widest text-[#475569] mb-3">Tu Próximo Viaje</p>
+                  <div className="flex flex-col items-center text-center py-2">
+                    <span className="material-symbols-outlined text-[40px] text-[#94A3B8] mb-2">calendar_today</span>
+                    <p className="text-[13px] text-[#475569] font-medium leading-snug">No tenés traslados programados.</p>
+                    <p className="text-[11px] text-[#94A3B8] mt-1">Reservá tu próximo viaje corporativo ahora.</p>
+                  </div>
+                </div>
+                <Link href="/reservar" className="mt-4 inline-flex items-center justify-center gap-1 text-white text-[12px] font-bold uppercase hover:bg-[#0A192F]/90 bg-[#0A192F] px-4 py-2.5 rounded-lg transition-all w-full">
+                  Agendar Viaje <span className="material-symbols-outlined text-[14px]">add_circle</span>
+                </Link>
+              </div>
+            )}
+            
+            {/* Columna 2: Estadísticas de Viaje */}
+            <div className="flex flex-col gap-4 h-full justify-between">
+              <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-5 shadow-sm hover:border-[#0A192F]/30 transition-colors flex-1 flex flex-col justify-center min-h-[98px]">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] mb-1">Viajes Realizados</p>
+                <h3 className="text-[28px] font-bold text-[#0A192F] leading-none">{viajesRealizados.toString().padStart(2, '0')}</h3>
+              </div>
+              
+              <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-5 shadow-sm hover:border-[#0A192F]/30 transition-colors relative overflow-hidden flex-1 flex flex-col justify-center min-h-[98px]">
+                <span className="material-symbols-outlined absolute -bottom-3 -right-2 text-[64px] text-[#10B981] opacity-5">account_balance_wallet</span>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#10B981] mb-1">Ahorro a favor</p>
+                <h3 className="text-[28px] font-bold text-[#0A192F] leading-none">${creditData.available_credit.toLocaleString('es-AR')}</h3>
+              </div>
+            </div>
 
-              {/* Widget: Mi Cuenta & Accesos */}
-              <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-5 shadow-sm hover:border-[#0A192F]/30 transition-all duration-300">
+            {/* Columna 3: Mi Cuenta & Accesos */}
+            <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-5 shadow-sm hover:border-[#0A192F]/30 transition-all duration-300 flex flex-col justify-between h-full min-h-[220px]">
+              <div>
                 <p className="text-[12px] font-bold uppercase tracking-widest text-[#475569] mb-3">Mi Cuenta & Accesos</p>
                 <div className="flex flex-col gap-2">
                   <a 
                     href={`${process.env.NEXT_PUBLIC_PAYMENTS_APP_URL || 'https://proyecto-a-payments-weshuttle.vercel.app'}/rider`} 
-                    className="flex items-center justify-between p-2.5 rounded-lg border border-[#D8DADC] hover:bg-[#F7F9FB] transition-colors text-[13px] font-semibold text-[#0A192F]"
+                    className="flex items-center justify-between p-2 rounded-lg border border-[#D8DADC] hover:bg-[#F7F9FB] transition-colors text-[13px] font-semibold text-[#0A192F]"
                   >
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-[18px] text-[#10B981]">account_balance_wallet</span>
@@ -256,7 +269,7 @@ export default async function VistaPublicaViajes() {
 
                   <a 
                     href={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || 'https://proyecto-a-feedback-weshuttle.vercel.app'}/dashboard/passenger/trips`} 
-                    className="flex items-center justify-between p-2.5 rounded-lg border border-[#D8DADC] hover:bg-[#F7F9FB] transition-colors text-[13px] font-semibold text-[#0A192F]"
+                    className="flex items-center justify-between p-2 rounded-lg border border-[#D8DADC] hover:bg-[#F7F9FB] transition-colors text-[13px] font-semibold text-[#0A192F]"
                   >
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-[18px] text-[#F59E0B]">reviews</span>
@@ -267,7 +280,7 @@ export default async function VistaPublicaViajes() {
 
                   <a 
                     href={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || 'https://proyecto-a-feedback-weshuttle.vercel.app'}/dashboard/passenger/sent-reviews`} 
-                    className="flex items-center justify-between p-2.5 rounded-lg border border-[#D8DADC] hover:bg-[#F7F9FB] transition-colors text-[13px] font-semibold text-[#0A192F]"
+                    className="flex items-center justify-between p-2 rounded-lg border border-[#D8DADC] hover:bg-[#F7F9FB] transition-colors text-[13px] font-semibold text-[#0A192F]"
                   >
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-[18px] text-[#3B82F6]">rate_review</span>
@@ -277,10 +290,10 @@ export default async function VistaPublicaViajes() {
                   </a>
                 </div>
               </div>
-
             </div>
-          )}
-        </div>
+
+          </div>
+        )}
 
         {/* SECCIÓN DE BENEFICIOS / INFO CORPORATIVA */}
         <section className="mt-12 mb-8">

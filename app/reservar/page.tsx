@@ -241,36 +241,46 @@ export default async function NuevaReservaPage({
             <p className="text-[#475569] text-[16px] mt-1">Complete los detalles para asegurar su lugar en el próximo servicio de WeShuttle.</p>
           </header>
 
-          <form action={confirmarReserva} className="flex flex-col gap-6">
+          <form action={confirmarReserva} className="space-y-8">
             
-            <div>
-              <label htmlFor="destino_id" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Destino Final</label>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">map</span>
-                <select id="destino_id" name="destino_id" defaultValue={preselectedDestino} required className="w-full min-w-0 h-[56px] pl-10 pr-8 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] appearance-none cursor-pointer truncate">
-                  <option value="">Seleccione su destino...</option>
-                  {destinos.map(d => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#475569] pointer-events-none">expand_more</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+              
+              {/* Columna Izquierda: Detalles del Destino y Origen */}
+              <div className="space-y-6 flex flex-col justify-start">
+                <div>
+                  <label htmlFor="destino_id" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Destino Final</label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">map</span>
+                    <select id="destino_id" name="destino_id" defaultValue={preselectedDestino} required className="w-full min-w-0 h-[56px] pl-10 pr-8 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] appearance-none cursor-pointer truncate">
+                      <option value="">Seleccione su destino...</option>
+                      {destinos.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                    <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#475569] pointer-events-none">expand_more</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="punto_partida" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Punto de Recogida</label>
+                  <AddressAutocomplete />
+                  <p className="text-[12px] text-[#475569] mt-2">Ej: Entrada principal Edificio Titanium</p>
+                </div>
               </div>
+              
+              {/* Columna Derecha: Selección de Horario Destacada */}
+              <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-[12px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-center">
+                <DateTimeInputs minDate={minDate} maxDate={maxDate} minTime={defaultTime} maxTime={maxTime} />
+              </div>
+
             </div>
             
-            {/* COMPONENTE INTELIGENTE DE SELECCIÓN DE DÍA Y HORA */}
-            <DateTimeInputs minDate={minDate} maxDate={maxDate} minTime={defaultTime} maxTime={maxTime} />
-            
-            <div>
-              <label htmlFor="punto_partida" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Punto de Recogida</label>
-              <AddressAutocomplete />
-              <p className="text-[12px] text-[#475569] mt-2">Ej: Entrada principal Edificio Titanium</p>
+            <div className="pt-6 border-t border-[#E2E8F0] flex flex-col gap-3">
+              <button type="submit" className="w-full h-[56px] bg-[#0A192F] text-white rounded-[8px] text-[14px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-all shadow-sm flex items-center justify-center gap-2 hover:scale-[1.005] active:scale-[0.995]">
+                Confirmar Reserva <span className="material-symbols-outlined text-[20px]">check_circle</span>
+              </button>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] text-center">Garantía de puntualidad WeShuttle</p>
             </div>
-            
-            <button type="submit" className="w-full h-[56px] bg-[#0A192F] text-white rounded-[8px] text-[14px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm flex items-center justify-center gap-2 mt-2">
-              Confirmar Reserva <span className="material-symbols-outlined text-[20px]">check_circle</span>
-            </button>
-            
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] text-center mt-2">Garantía de puntualidad WeShuttle</p>
           </form>
         </div>
 
