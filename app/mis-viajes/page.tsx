@@ -276,8 +276,13 @@ export default async function MisViajesPage({
     const id = formData.get('reserva_id') as string
 
     const reservaCheck = await prisma.reservation.findUnique({ where: { id } })
-    if (!reservaCheck || new Date(reservaCheck.departure_time) < new Date()) {
-      redirect(`/mis-viajes?toast=Error:%20Viaje%20Expirado&toastType=error#viaje-${id}`);
+    if (!reservaCheck) {
+      redirect(`/mis-viajes?toast=Error:%20Viaje%20no%20encontrado&toastType=error`);
+    }
+
+    const isPast = new Date(reservaCheck.departure_time) < new Date();
+    if (isPast || reservaCheck.reservation_status === 'CANCELED') {
+      redirect(`/mis-viajes?toast=Error:%20El%20viaje%20ya%20expiró%20o%20fue%20cancelado&toastType=error#viaje-${id}`);
     }
 
     if (!reservaCheck.pool_id) {
@@ -489,7 +494,7 @@ export default async function MisViajesPage({
                     </div>
 
                     {/* Fila de Detalles Técnicos */}
-                    {reserva.assigned_driver_snapshot && (
+                    {reserva.assigned_driver_snapshot && reserva.reservation_status !== 'CANCELED' && (
                       <div className="flex flex-col sm:flex-row gap-4 p-4 bg-[#F7F9FB] rounded-[8px] border border-[#D8DADC]">
                         <div className="flex-1">
                           <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] mb-1">Vehículo Asignado</p>
@@ -524,7 +529,12 @@ export default async function MisViajesPage({
 
                     <div className="mb-6">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] mb-4">Información Operativa</p>
-                      {reserva.assigned_driver_snapshot ? (
+                      {reserva.reservation_status === 'CANCELED' ? (
+                        <div className="text-[12px] text-[#EF4444] font-semibold flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[16px]">cancel</span>
+                          Sin chofer (Viaje Cancelado)
+                        </div>
+                      ) : reserva.assigned_driver_snapshot ? (
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-full border border-[#D8DADC] bg-[#FFFFFF] flex items-center justify-center text-[14px] font-bold text-[#0A192F]">
                             {((reserva.assigned_driver_snapshot as any)?.driver_name || 'NN').split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
