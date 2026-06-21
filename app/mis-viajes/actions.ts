@@ -25,8 +25,9 @@ export async function saveProfileAction(formData: FormData) {
   if (!fullName || fullName.trim().length < 3) {
     throw new Error("El nombre completo debe tener al menos 3 caracteres.")
   }
-  if (!phone || phone.trim().length < 6) {
-    throw new Error("El teléfono ingresado es inválido.")
+  const phoneRegex = /^\+?[0-9\s\-()]{6,20}$/;
+  if (!phone || !phoneRegex.test(phone.trim())) {
+    throw new Error("El formato del teléfono es inválido. Debe tener entre 6 y 20 caracteres y solo permitir números, espacios, +, - o ().")
   }
 
   await prisma.passenger.upsert({

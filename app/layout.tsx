@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   description: 'Plataforma B2B para la gestión de traslados y monitoreo de flota en tiempo real.',
 }
 
+const phoneRegex = /^\+?[0-9\s\-()]{6,20}$/;
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { userId } = await auth()
   let showProfileSetup = false
@@ -25,7 +27,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       where: { clerk_user_id: userId }
     })
 
-    if (!passenger || passenger.full_name.trim() === '' || passenger.full_name === 'Pasajero' || passenger.phone === 'Sin registrar') {
+    const isPhoneInvalid = !passenger || !passenger.phone || !phoneRegex.test(passenger.phone.trim());
+
+    if (!passenger || passenger.full_name.trim() === '' || passenger.full_name === 'Pasajero' || isPhoneInvalid) {
       showProfileSetup = true
       const user = await currentUser()
       defaultName = [user?.firstName, user?.lastName].filter(Boolean).join(' ')

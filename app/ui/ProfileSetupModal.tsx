@@ -25,8 +25,9 @@ export default function ProfileSetupModal({ isOpen, defaultName }: ProfileSetupM
       setErrorMsg('El nombre completo debe tener al menos 3 caracteres.')
       return
     }
-    if (phone.trim().length < 6) {
-      setErrorMsg('El teléfono ingresado es muy corto o inválido.')
+    const phoneRegex = /^\+?[0-9\s\-()]{6,20}$/;
+    if (!phoneRegex.test(phone.trim())) {
+      setErrorMsg('El formato del teléfono es inválido. Debe tener entre 6 y 20 caracteres y solo permitir números, espacios, +, - o ().')
       return
     }
 
