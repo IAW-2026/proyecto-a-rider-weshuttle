@@ -844,7 +844,23 @@ export default async function MisViajesPage({
                        'No realizado'}
                     </span>
                   </div>
-                  <h3 className="text-[16px] font-bold text-[#0A192F] mb-4 truncate">{reserva.destination.name}</h3>
+                  <div className="flex flex-col gap-2.5 mb-4 mt-2">
+                    <div className="flex items-start gap-2">
+                      <span className="material-symbols-outlined text-[16px] text-[#475569] mt-0.5 shrink-0">location_on</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] leading-none mb-0.5">Inicio (Recogida)</p>
+                        <h4 className="text-[14px] font-semibold text-[#0A192F] truncate">{reserva.pickup_address}</h4>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-2">
+                      <span className="material-symbols-outlined text-[16px] text-[#10B981] mt-0.5 shrink-0">map</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#10B981] leading-none mb-0.5">Destino</p>
+                        <h4 className="text-[14px] font-semibold text-[#0A192F] truncate">{reserva.destination.name}</h4>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="flex justify-between items-center pt-4 border-t border-[#D8DADC]">
                     {reserva.reservation_status === 'CONFIRMED' ? (
