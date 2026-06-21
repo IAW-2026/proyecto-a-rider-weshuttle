@@ -4,6 +4,7 @@ import { auth, currentUser } from '@clerk/nextjs/server'
 import { UserButton } from "@clerk/nextjs"
 import { revalidatePath } from 'next/cache'
 import { getUserCreditBalance, getDriverAppPoolStatus } from '@/lib/api'
+import Navbar from '@/app/ui/Navbar'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,86 +101,7 @@ export default async function VistaPublicaViajes() {
     <div className="min-h-screen bg-[#F7F9FB] text-[#0A192F]">
         
       {/* NAVEGACIÓN SUPERIOR (TopNavBar) */}
-      <nav className="bg-[#FFFFFF] h-20 w-full sticky top-0 z-50 border-b border-[#D8DADC] shadow-sm flex items-center justify-center">
-        <div className="w-full max-w-5xl mx-auto h-full flex items-center justify-between px-4 md:px-8 relative">
-          {/* LOGO */}
-          <div className="flex items-center">
-            <h1 className="text-[24px] font-extrabold italic text-[#0A192F] tracking-tight">WeShuttle</h1>
-          </div>
-
-        {/* ENLACES CENTRALES */}
-        {userId && (
-          <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center h-full gap-8">
-            <Link href="/" className="text-[#0A192F] font-bold text-[14px] h-full flex items-center border-b-2 border-[#0A192F]">Inicio</Link>
-            <Link href="/mis-viajes" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Mis Viajes</Link>
-            <Link href="/reservar" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Reservar</Link>
-          </div>
-        )}
-
-        {/* ACCIONES DE USUARIO */}
-        <div className="flex items-center gap-4 h-full">
-          {userId ? (
-            <>
-              {/* CAMPANITA DE NOTIFICACIONES */}
-              <div className="relative group flex items-center h-full" tabIndex={0}>
-                <div className="cursor-pointer text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 relative flex items-center justify-center p-2 rounded-full hover:bg-[#F7F9FB]">
-                  <span className="material-symbols-outlined text-[24px]">notifications</span>
-              {notificaciones.length > 0 && <span className="absolute top-1 right-1 bg-[#DC2626] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-bounce">{notificaciones.length}</span>}
-                </div>
-                {/* Menú desplegable con puente invisible */}
-                <div className="fixed left-4 right-4 top-[72px] sm:absolute sm:top-[100%] sm:left-auto sm:right-0 sm:w-72 z-50 hidden group-hover:block group-focus-within:block sm:pt-1">
-                  <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-lg shadow-sm overflow-hidden">
-                    <div className="p-4 border-b border-[#D8DADC] flex justify-between items-center bg-[#F7F9FB]">
-                      <h3 className="text-[16px] font-semibold text-[#0A192F]">Notificaciones</h3>
-                      {notificaciones.length > 0 && (
-                        <form action={limpiarNotificaciones}>
-                          <button type="submit" className="text-[12px] text-[#0A192F] font-bold uppercase tracking-widest hover:underline">Marcar leídas</button>
-                        </form>
-                      )}
-                    </div>
-                    <div className="max-h-64 overflow-y-auto p-2">
-                      {notificaciones.length === 0 ? (
-                        <p className="p-4 text-center text-[14px] text-[#475569]">No hay avisos nuevos.</p>
-                      ) : (
-                        notificaciones.map(notif => (
-                          <div key={notif.id} className="p-3 mb-1 bg-[#F7F9FB] text-[#0A192F] text-[12px] rounded-lg border border-[#D8DADC]">
-                            {notif.type === 'FEEDBACK_AVAILABLE' ? (
-                              <a 
-                                href={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || '#'}/?return_url=${process.env.NEXT_PUBLIC_RIDER_APP_URL || '#'}`} 
-                                className="text-[#3B82F6] hover:underline font-bold block"
-                              >
-                                {notif.message} <span className="material-symbols-outlined text-[10px] align-middle ml-1">open_in_new</span>
-                              </a>
-                            ) : (
-                              notif.message
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {isAdmin && (
-                <Link href="/admin" className="border border-[#0A192F] text-[#0A192F] px-3 py-1.5 rounded-lg text-[12px] font-bold hover:bg-[#F7F9FB] transition-colors duration-200">
-                  Panel Admin
-                </Link>
-              )}
-              
-              {/* PERFIL */}
-              <div className="w-[40px] h-[40px] rounded-full border border-[#D8DADC] flex items-center justify-center overflow-hidden bg-white">
-                <UserButton />
-              </div>
-            </>
-          ) : (
-            <Link href="/sign-in" className="bg-[#0A192F] text-white px-5 py-2 rounded-lg text-[12px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-colors shadow-sm">
-              Ingresar
-            </Link>
-          )}
-        </div>
-      </div>
-    </nav>
+      <Navbar isAdmin={isAdmin} notificaciones={notificaciones} limpiarNotificaciones={limpiarNotificaciones} />
 
       {/* CONTENIDO PRINCIPAL */}
       <main className="p-4 md:p-8 max-w-5xl mx-auto pb-24 md:pb-8">
