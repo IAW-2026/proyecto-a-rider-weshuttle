@@ -83,11 +83,16 @@ export default function TripTracker({ poolId, passengerUserId, reservationId }: 
       <div className="flex items-center justify-between mb-3 border-b border-[#F7F9FB] pb-2">
         <span className="text-[10px] font-bold uppercase tracking-wider text-[#475569]">Seguimiento en Vivo</span>
         <span className="flex items-center gap-1">
-          <span className={`w-2 h-2 rounded-full ${status === 'IN_PROGRESS' ? 'bg-[#10B981] animate-ping' : 'bg-[#475569]'}`}></span>
+          <span className={`w-2 h-2 rounded-full ${
+            status === 'IN_PROGRESS' ? 'bg-[#10B981] animate-ping' : 
+            status === 'AVAILABLE' ? 'bg-[#F59E0B] animate-pulse' : 
+            'bg-[#475569]'
+          }`}></span>
           <span className="text-[11px] font-bold text-[#0A192F]">
             {status === 'IN_PROGRESS' ? 'Recorrido en progreso' : 
              status === 'COMPLETED' ? 'Llegó a destino' : 
-             status === 'CANCELED' ? 'Cancelado' : 'Esperando partida'}
+             status === 'CANCELED' ? 'Cancelado' : 
+             status === 'AVAILABLE' ? 'Buscando conductor' : 'Esperando partida'}
           </span>
         </span>
       </div>
@@ -163,7 +168,21 @@ export default function TripTracker({ poolId, passengerUserId, reservationId }: 
         </div>
       )}
 
-      {(status === 'AVAILABLE' || status === 'ASSIGNED') && (
+      {status === 'AVAILABLE' && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-[6px] text-[#B45309]">
+          <div className="flex items-start gap-2">
+            <span className="material-symbols-outlined text-[20px] shrink-0 text-[#D97706]">hail</span>
+            <div>
+              <h4 className="text-[13px] font-bold">Buscando Conductor</h4>
+              <p className="text-[11px] mt-0.5 text-[#92400E]">
+                El viaje está programado. En cuanto la logística asigne una combi y chofer, podrás ver sus detalles y realizar el seguimiento.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {status === 'ASSIGNED' && (
         <div className="p-3 bg-slate-50 border border-slate-200 rounded-[6px] text-[#475569]">
           <div className="flex items-start gap-2">
             <span className="material-symbols-outlined text-[20px] shrink-0 text-[#64748B]">schedule</span>

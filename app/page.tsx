@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { UserButton } from "@clerk/nextjs"
 import { revalidatePath } from 'next/cache'
-import { getUserCreditBalance } from '@/lib/api'
+import { getUserCreditBalance, getDriverAppPoolStatus } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,15 +20,52 @@ export default async function VistaPublicaViajes() {
 
   // Buscamos el próximo viaje programado del usuario (si está logueado)
   const ahora = new Date()
-  const proximoViaje = userId ? await prisma.reservation.findFirst({
+
+  // Obtenemos los pool_ids finalizados basados en las notificaciones de feedback recibidas
+  const feedbackNotifications = userId ? await prisma.passengerNotification.findMany({
+    where: {
+      passenger_user_id: userId,
+      type: 'FEEDBACK_AVAILABLE'
+    },
+    select: { pool_id: true }
+  }) : []
+  const completedPoolIds = feedbackNotifications
+    .map(n => n.pool_id)
+    .filter((id): id is string => typeof id === 'string')
+
+  const candidateViajes = userId ? await prisma.reservation.findMany({
     where: {
       passenger_user_id: userId,
       reservation_status: { in: ['PENDING_PAYMENT', 'PENDING_DRIVER', 'CONFIRMED'] },
-      departure_time: { gte: ahora }
+      departure_time: { gte: ahora },
+      OR: [
+        { pool_id: null },
+        { pool_id: { notIn: completedPoolIds } }
+      ]
     },
     include: { destination: true },
-    orderBy: { departure_time: 'asc' }
-  }) : null;
+    orderBy: { departure_time: 'asc' },
+    take: 5
+  }) : [];
+
+  let proximoViaje: any = null;
+  if (userId && candidateViajes.length > 0) {
+    for (const viaje of candidateViajes) {
+      let poolStatus = 'ASSIGNED';
+      if (viaje.pool_id) {
+        try {
+          const statusData = await getDriverAppPoolStatus(viaje.pool_id);
+          poolStatus = statusData.status || 'ASSIGNED';
+        } catch (err) {
+          console.error(`Error al obtener estado real del pool ${viaje.pool_id}:`, err);
+        }
+      }
+      if (!['COMPLETED', 'CANCELED'].includes(poolStatus)) {
+        proximoViaje = viaje;
+        break;
+      }
+    }
+  }
 
   // Contamos cuántos viajes completó el usuario
   const viajesRealizados = userId ? await prisma.reservation.count({
@@ -177,7 +214,7 @@ export default async function VistaPublicaViajes() {
                       <h3 className="text-[18px] font-bold text-[#0A192F] leading-tight truncate">{proximoViaje.pickup_address}</h3>
                       <h3 className="text-[18px] font-bold text-[#475569] leading-tight truncate">→ {proximoViaje.destination.name}</h3>
                       <p className="text-[13px] text-[#475569] mt-3 flex items-center gap-1.5 font-medium">
-                        <span className="material-symbols-outlined text-[16px]">schedule</span> {new Date(proximoViaje.departure_time).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} hs
+                        <span className="material-symbols-outlined text-[16px]">schedule</span> {new Date(proximoViaje.departure_time).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' })} hs
                       </p>
                     </div>
                     <Link href={`/mis-viajes?viaje_id=${proximoViaje.id}&from=home`} className="mt-1 inline-flex items-center justify-center gap-1 text-[#0A192F] text-[12px] font-bold uppercase hover:bg-[#e2e8f0] bg-[#F7F9FB] border border-[#D8DADC] px-4 py-2.5 rounded-lg transition-colors w-full">

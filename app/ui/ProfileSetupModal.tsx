@@ -48,7 +48,7 @@ export default function ProfileSetupModal({ isOpen, defaultName }: ProfileSetupM
   return (
     <div className="fixed inset-0 bg-[#0A192F]/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-fade-in">
       <div className="bg-white rounded-xl shadow-2xl border border-[#D8DADC] max-w-md w-full overflow-hidden p-6 md:p-8 transform scale-100 transition-all">
-        
+
         {/* Header */}
         <div className="text-center mb-6">
           <div className="w-12 h-12 bg-[#3B82F6]/10 text-[#2563EB] rounded-full flex items-center justify-center mx-auto mb-4">
