@@ -169,11 +169,11 @@ export default async function NuevaReservaPage({
   return (
     <div className="min-h-screen bg-[#F7F9FB] text-[#0A192F]">
       
-      {/* NAVEGACIÓN SUPERIOR (TopNavBar) */}
-      <nav className="bg-[#FFFFFF] h-20 w-full flex items-center justify-between px-6 sticky top-0 z-50 border-b border-[#D8DADC] shadow-sm">
-        <div className="flex items-center">
-          <Link href="/" className="text-[24px] font-extrabold italic text-[#0A192F] tracking-tight">WeShuttle</Link>
-        </div>
+      <nav className="bg-[#FFFFFF] h-20 w-full sticky top-0 z-50 border-b border-[#D8DADC] shadow-sm flex items-center justify-center">
+        <div className="w-full max-w-4xl mx-auto h-full flex items-center justify-between px-4 md:px-8 relative">
+          <div className="flex items-center">
+            <Link href="/" className="text-[24px] font-extrabold italic text-[#0A192F] tracking-tight">WeShuttle</Link>
+          </div>
         <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center h-full gap-8">
           <Link href="/" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Inicio</Link>
           <Link href="/mis-viajes" className="text-[#4B5563] hover:text-[#0A192F] transition-colors duration-200 font-medium text-[14px] h-full flex items-center border-b-2 border-transparent">Mis Viajes</Link>
@@ -227,9 +227,10 @@ export default async function NuevaReservaPage({
             <UserButton />
           </div>
         </div>
-      </nav>
+      </div>
+    </nav>
 
-      <main className="py-[40px] px-[24px] md:px-[48px] max-w-4xl mx-auto pb-24 md:pb-8">
+    <main className="py-[40px] px-[24px] md:px-[48px] max-w-4xl mx-auto pb-24 md:pb-8">
         
         <div className="w-full bg-[#FFFFFF] p-[40px] md:p-[48px] rounded-[12px] border border-[#D8DADC] shadow-sm">
           <header className="mb-8">

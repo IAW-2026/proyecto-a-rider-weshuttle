@@ -100,12 +100,12 @@ export default async function VistaPublicaViajes() {
     <div className="min-h-screen bg-[#F7F9FB] text-[#0A192F]">
         
       {/* NAVEGACIÓN SUPERIOR (TopNavBar) */}
-      <nav className="bg-[#FFFFFF] h-20 w-full flex items-center justify-between px-6 sticky top-0 z-50 border-b border-[#D8DADC] shadow-sm">
-        
-        {/* LOGO */}
-        <div className="flex items-center">
-          <h1 className="text-[24px] font-extrabold italic text-[#0A192F] tracking-tight">WeShuttle</h1>
-        </div>
+      <nav className="bg-[#FFFFFF] h-20 w-full sticky top-0 z-50 border-b border-[#D8DADC] shadow-sm flex items-center justify-center">
+        <div className="w-full max-w-5xl mx-auto h-full flex items-center justify-between px-4 md:px-8 relative">
+          {/* LOGO */}
+          <div className="flex items-center">
+            <h1 className="text-[24px] font-extrabold italic text-[#0A192F] tracking-tight">WeShuttle</h1>
+          </div>
 
         {/* ENLACES CENTRALES */}
         {userId && (
@@ -178,7 +178,8 @@ export default async function VistaPublicaViajes() {
             </Link>
           )}
         </div>
-      </nav>
+      </div>
+    </nav>
 
       {/* CONTENIDO PRINCIPAL */}
       <main className="p-4 md:p-8 max-w-5xl mx-auto pb-24 md:pb-8">
@@ -189,7 +190,7 @@ export default async function VistaPublicaViajes() {
           <p className="text-[#475569] text-[16px] max-w-2xl">Gestiona tus traslados corporativos con precisión y facilidad. Tu asiento asegurado en las mejores unidades.</p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-start">
           
           {/* HERO BANNER */}
           <section className={`bg-[#0A192F] text-[#F7F9FB] p-8 md:p-10 rounded-xl shadow-sm flex flex-col items-start text-left justify-center relative overflow-hidden ${userId ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
@@ -235,6 +236,45 @@ export default async function VistaPublicaViajes() {
                   <span className="material-symbols-outlined absolute -bottom-3 -right-2 text-[64px] text-[#10B981] opacity-5">account_balance_wallet</span>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-[#10B981] mb-1">Ahorro a favor</p>
                   <h3 className="text-[24px] font-bold text-[#0A192F] leading-none">${creditData.available_credit.toLocaleString('es-AR')}</h3>
+                </div>
+              </div>
+
+              {/* Widget: Mi Cuenta & Accesos */}
+              <div className="bg-[#FFFFFF] border border-[#D8DADC] rounded-xl p-5 shadow-sm hover:border-[#0A192F]/30 transition-all duration-300">
+                <p className="text-[12px] font-bold uppercase tracking-widest text-[#475569] mb-3">Mi Cuenta & Accesos</p>
+                <div className="flex flex-col gap-2">
+                  <a 
+                    href={`${process.env.NEXT_PUBLIC_PAYMENTS_APP_URL || 'https://proyecto-a-payments-weshuttle.vercel.app'}/rider`} 
+                    className="flex items-center justify-between p-2.5 rounded-lg border border-[#D8DADC] hover:bg-[#F7F9FB] transition-colors text-[13px] font-semibold text-[#0A192F]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-[#10B981]">account_balance_wallet</span>
+                      <span>Ver mi Billetera</span>
+                    </div>
+                    <span className="material-symbols-outlined text-[16px] text-[#475569]">chevron_right</span>
+                  </a>
+
+                  <a 
+                    href={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || 'https://proyecto-a-feedback-weshuttle.vercel.app'}/dashboard/passenger/trips`} 
+                    className="flex items-center justify-between p-2.5 rounded-lg border border-[#D8DADC] hover:bg-[#F7F9FB] transition-colors text-[13px] font-semibold text-[#0A192F]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-[#F59E0B]">reviews</span>
+                      <span>Reseñas Recibidas</span>
+                    </div>
+                    <span className="material-symbols-outlined text-[16px] text-[#475569]">chevron_right</span>
+                  </a>
+
+                  <a 
+                    href={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || 'https://proyecto-a-feedback-weshuttle.vercel.app'}/dashboard/passenger/sent-reviews`} 
+                    className="flex items-center justify-between p-2.5 rounded-lg border border-[#D8DADC] hover:bg-[#F7F9FB] transition-colors text-[13px] font-semibold text-[#0A192F]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-[#3B82F6]">rate_review</span>
+                      <span>Reseñas Enviadas</span>
+                    </div>
+                    <span className="material-symbols-outlined text-[16px] text-[#475569]">chevron_right</span>
+                  </a>
                 </div>
               </div>
 
