@@ -230,28 +230,28 @@ export default async function NuevaReservaPage({
       </div>
     </nav>
 
-    <main className="py-[40px] px-[24px] md:px-[48px] max-w-4xl mx-auto pb-24 md:pb-8">
+    <main className="py-[24px] px-[20px] md:px-[40px] max-w-4xl mx-auto pb-24 md:pb-8">
         
-        <div className="w-full bg-[#FFFFFF] p-[40px] md:p-[48px] rounded-[12px] border border-[#D8DADC] shadow-sm">
-          <header className="mb-8">
-            <Link href="/" className="inline-flex items-center gap-1.5 text-[#475569] hover:text-[#0A192F] text-[12px] font-bold uppercase tracking-widest transition-colors mb-4">
+        <div className="w-full bg-[#FFFFFF] p-6 md:p-8 rounded-[12px] border border-[#D8DADC] shadow-sm">
+          <header className="mb-6">
+            <Link href="/" className="inline-flex items-center gap-1.5 text-[#475569] hover:text-[#0A192F] text-[12px] font-bold uppercase tracking-widest transition-colors mb-3">
               <span className="material-symbols-outlined text-[16px]">arrow_back</span> Volver al Inicio
             </Link>
-            <h1 className="text-[32px] font-bold text-[#0A192F] tracking-tight">Reservar Asiento</h1>
-            <p className="text-[#475569] text-[16px] mt-1">Complete los detalles para asegurar su lugar en el próximo servicio de WeShuttle.</p>
+            <h1 className="text-[28px] font-bold text-[#0A192F] tracking-tight">Reservar Asiento</h1>
+            <p className="text-[#475569] text-[14px] mt-1">Complete los detalles para asegurar su lugar en el próximo servicio de WeShuttle.</p>
           </header>
 
-          <form action={confirmarReserva} className="space-y-8">
+          <form action={confirmarReserva} className="space-y-6">
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
               
               {/* Columna Izquierda: Detalles del Destino y Origen */}
-              <div className="space-y-6 flex flex-col justify-start">
+              <div className="space-y-4 flex flex-col justify-start">
                 <div>
-                  <label htmlFor="destino_id" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Destino Final</label>
+                  <label htmlFor="destino_id" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-1.5">Destino Final</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]">map</span>
-                    <select id="destino_id" name="destino_id" defaultValue={preselectedDestino} required className="w-full min-w-0 h-[56px] pl-10 pr-8 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] appearance-none cursor-pointer truncate">
+                    <select id="destino_id" name="destino_id" defaultValue={preselectedDestino} required className="w-full min-w-0 h-[50px] pl-10 pr-8 rounded-[8px] border border-[#D8DADC] text-[15px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] appearance-none cursor-pointer truncate">
                       <option value="">Seleccione su destino...</option>
                       {destinos.map(d => (
                         <option key={d.id} value={d.id}>{d.name}</option>
@@ -262,21 +262,21 @@ export default async function NuevaReservaPage({
                 </div>
 
                 <div>
-                  <label htmlFor="punto_partida" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Punto de Recogida</label>
+                  <label htmlFor="punto_partida" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-1.5">Punto de Recogida</label>
                   <AddressAutocomplete />
-                  <p className="text-[12px] text-[#475569] mt-2">Ej: Entrada principal Edificio Titanium</p>
+                  <p className="text-[11px] text-[#475569] mt-1.5">Ej: Entrada principal Edificio Titanium</p>
                 </div>
               </div>
               
               {/* Columna Derecha: Selección de Horario Destacada */}
-              <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-6 rounded-[12px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-center">
+              <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-4 md:p-5 rounded-[12px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-center">
                 <DateTimeInputs minDate={minDate} maxDate={maxDate} minTime={defaultTime} maxTime={maxTime} />
               </div>
 
             </div>
             
-            <div className="pt-6 border-t border-[#E2E8F0] flex flex-col gap-3">
-              <button type="submit" className="w-full h-[56px] bg-[#0A192F] text-white rounded-[8px] text-[14px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-all shadow-sm flex items-center justify-center gap-2 hover:scale-[1.005] active:scale-[0.995]">
+            <div className="pt-4 border-t border-[#E2E8F0] flex flex-col gap-2">
+              <button type="submit" className="w-full h-[50px] bg-[#0A192F] text-white rounded-[8px] text-[13px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-all shadow-sm flex items-center justify-center gap-2 hover:scale-[1.005] active:scale-[0.995]">
                 Confirmar Reserva <span className="material-symbols-outlined text-[20px]">check_circle</span>
               </button>
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#475569] text-center">Garantía de puntualidad WeShuttle</p>
@@ -284,9 +284,9 @@ export default async function NuevaReservaPage({
           </form>
         </div>
 
-        <footer className="mt-12 pt-6 flex flex-col items-center gap-4 text-center">
-          <Link href="#" className="text-[14px] font-medium text-[#0A192F] hover:underline">¿Necesita asistencia especial? Contacte a Logística</Link>
-          <div className="flex gap-4 text-[12px] text-[#475569]">
+        <footer className="mt-6 pt-4 flex flex-col items-center gap-3 text-center">
+          <Link href="#" className="text-[13px] font-medium text-[#0A192F] hover:underline">¿Necesita asistencia especial? Contacte a Logística</Link>
+          <div className="flex gap-4 text-[11px] text-[#475569]">
             <Link href="#" className="hover:text-[#0A192F]">Términos</Link>
             <span>|</span>
             <Link href="#" className="hover:text-[#0A192F]">Privacidad</Link>

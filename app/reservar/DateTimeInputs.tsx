@@ -57,17 +57,17 @@ export default function DateTimeInputs({ minDate, maxDate, minTime, maxTime }: {
   const selectedParts = getSelectedParts(hora);
 
   return (
-    <div className="flex flex-col gap-6 w-full">
+    <div className="flex flex-col gap-4 w-full">
       
       {/* SELECCIÓN DE DÍA */}
       <div className="w-full">
-        <label htmlFor="fecha" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Día</label>
+        <label htmlFor="fecha" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-1.5">Día</label>
         <div className="relative">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569] z-10 pointer-events-none">calendar_today</span>
           <input 
             type="date" id="fecha" name="fecha" required 
             min={minDate} max={maxDate} value={fecha} onChange={(e) => setFecha(e.target.value)}
-            className="w-full appearance-none min-w-0 max-w-full h-[56px] pl-10 pr-10 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] cursor-pointer" 
+            className="w-full appearance-none min-w-0 max-w-full h-[50px] pl-10 pr-10 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] cursor-pointer" 
           />
           <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#475569] z-10 pointer-events-none">expand_more</span>
         </div>
@@ -75,7 +75,7 @@ export default function DateTimeInputs({ minDate, maxDate, minTime, maxTime }: {
       
       {/* SELECCIÓN DE HORA */}
       <div className="w-full relative">
-        <label htmlFor="hora" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-2">Hora</label>
+        <label htmlFor="hora" className="block text-[12px] font-bold uppercase tracking-widest text-[#0A192F] mb-1.5">Hora</label>
         <div className="relative">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#475569] z-10 pointer-events-none">schedule</span>
           
@@ -86,7 +86,7 @@ export default function DateTimeInputs({ minDate, maxDate, minTime, maxTime }: {
           <button 
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="w-full relative flex items-center justify-between h-[56px] pl-10 pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] text-left cursor-pointer"
+            className="w-full relative flex items-center justify-between h-[50px] pl-10 pr-4 rounded-[8px] border border-[#D8DADC] text-[16px] md:text-[14px] font-semibold bg-[#FFFFFF] outline-none focus:border-[#0A192F] focus:ring-1 focus:ring-[#0A192F] transition-all text-[#0A192F] text-left cursor-pointer"
           >
             <div className="flex items-center">
               <span>{selectedParts.h}:{selectedParts.m}</span>
