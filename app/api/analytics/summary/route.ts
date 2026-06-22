@@ -3,7 +3,22 @@ import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
   try {
-    // Auth: pendiente de implementación grupal (etapa final)
+    // 1. Obtener parámetros de filtrado por fecha
+    const { searchParams } = new URL(request.url)
+    const startDate = searchParams.get('start_date')
+    const endDate = searchParams.get('end_date')
+
+    const dateFilter: any = {}
+    if (startDate || endDate) {
+      dateFilter.departure_time = {}
+      if (startDate) {
+        dateFilter.departure_time.gte = new Date(`${startDate}T00:00:00.000Z`)
+      }
+      if (endDate) {
+        dateFilter.departure_time.lte = new Date(`${endDate}T23:59:59.999Z`)
+      }
+    }
+
     // 2. Recopilar métricas de Pasajeros
     const totalPassengers = await prisma.passenger.count()
     const activePassengers = await prisma.passenger.count({
@@ -11,11 +26,14 @@ export async function GET(request: Request) {
     })
 
     // 3. Recopilar métricas de Reservas
-    const totalReservations = await prisma.reservation.count()
+    const totalReservations = await prisma.reservation.count({
+      where: dateFilter
+    })
     
     // Reservas agrupadas por estado de reserva
     const reservationsGrouped = await prisma.reservation.groupBy({
       by: ['reservation_status'],
+      where: dateFilter,
       _count: {
         id: true
       }
@@ -28,6 +46,7 @@ export async function GET(request: Request) {
 
     // Reservas agrupadas por nombre de destino
     const reservationsWithDestinations = await prisma.reservation.findMany({
+      where: dateFilter,
       select: {
         destination: {
           select: {
@@ -47,6 +66,7 @@ export async function GET(request: Request) {
 
     // 4. Recopilar métricas Financieras
     const financials = await prisma.reservation.aggregate({
+      where: dateFilter,
       _sum: {
         max_price: true,
         amount_charged: true,
