@@ -139,12 +139,12 @@ export default async function NuevaReservaPage({
 
   // Calculamos la hora mínima y máxima permitida para el input date
   const ahoraUtc = new Date()
-  const minArgConMargen = new Date(ahoraUtc.getTime() - 3 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000) 
-  
+  const minArgConMargen = new Date(ahoraUtc.getTime() - 3 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000)
+
   // Redondear minArgConMargen hacia arriba al próximo intervalo de 30 minutos (:00 o :30)
   const intervaloMs = 30 * 60 * 1000;
   const minArgRedondeado = new Date(Math.ceil(minArgConMargen.getTime() / intervaloMs) * intervaloMs);
-  
+
   const minDateTime = minArgRedondeado.toISOString().slice(0, 16)
   const maxArgConMargen = new Date(ahoraUtc.getTime() - 3 * 60 * 60 * 1000 + 24 * 60 * 60 * 1000)
   const maxDateTime = maxArgConMargen.toISOString().slice(0, 16)
@@ -169,11 +169,11 @@ export default async function NuevaReservaPage({
 
   return (
     <div className="min-h-screen bg-[#F7F9FB] text-[#0A192F]">
-      
+
       <Navbar isAdmin={isAdmin} notificaciones={notificaciones} limpiarNotificaciones={limpiarNotificaciones} />
 
-    <main className="py-[24px] px-[20px] md:px-[40px] max-w-4xl mx-auto pb-24 md:pb-8">
-        
+      <main className="py-[24px] px-[20px] md:px-[40px] max-w-4xl mx-auto pb-24 md:pb-8">
+
         <div className="w-full bg-[#FFFFFF] p-6 md:p-8 rounded-[12px] border border-[#D8DADC] shadow-sm">
           <header className="mb-6">
             <Link href="/" className="inline-flex items-center gap-1.5 text-[#475569] hover:text-[#0A192F] text-[12px] font-bold uppercase tracking-widest transition-colors mb-3">
@@ -184,9 +184,9 @@ export default async function NuevaReservaPage({
           </header>
 
           <form action={confirmarReserva} className="space-y-6">
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-              
+
               {/* Columna Izquierda: Detalles del Destino y Origen */}
               <div className="space-y-4 flex flex-col justify-start">
                 <div>
@@ -209,14 +209,14 @@ export default async function NuevaReservaPage({
                   <p className="text-[11px] text-[#475569] mt-1.5">Ej: Entrada principal Edificio Titanium</p>
                 </div>
               </div>
-              
+
               {/* Columna Derecha: Selección de Horario Destacada */}
               <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-4 md:p-5 rounded-[12px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] flex flex-col justify-center">
                 <DateTimeInputs minDate={minDate} maxDate={maxDate} minTime={defaultTime} maxTime={maxTime} />
               </div>
 
             </div>
-            
+
             <div className="pt-4 border-t border-[#E2E8F0] flex flex-col gap-2">
               <button type="submit" className="w-full h-[50px] bg-[#0A192F] text-white rounded-[8px] text-[13px] font-bold uppercase tracking-widest hover:bg-[#0A192F]/90 transition-all shadow-sm flex items-center justify-center gap-2 hover:scale-[1.005] active:scale-[0.995]">
                 Confirmar Reserva <span className="material-symbols-outlined text-[20px]">check_circle</span>
