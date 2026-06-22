@@ -3,33 +3,7 @@ import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
   try {
-    // 1. Validación de la API Key compartida
-    const authHeader = request.headers.get('Authorization')
-    const expectedKey = process.env.ANALYTICS_API_KEY
-
-    if (!expectedKey) {
-      console.warn('ANALYTICS_API_KEY no está configurada en las variables de entorno.')
-      return NextResponse.json(
-        { error: 'INTERNAL_SERVER_ERROR', message: 'Configuración de seguridad incompleta en el servidor.' },
-        { status: 500 }
-      )
-    }
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'UNAUTHORIZED', message: 'Se requiere autenticación Bearer Token.' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.substring(7)
-    if (token !== expectedKey) {
-      return NextResponse.json(
-        { error: 'UNAUTHORIZED', message: 'API Key inválida.' },
-        { status: 401 }
-      )
-    }
-
+    // Auth: pendiente de implementación grupal (etapa final)
     // 2. Recopilar métricas de Pasajeros
     const totalPassengers = await prisma.passenger.count()
     const activePassengers = await prisma.passenger.count({
