@@ -196,8 +196,10 @@ export async function GET(request: Request) {
         const count = daysMap[dayName] || 0
         const pct = (count / totalReservations) * 100
         if (pct < 10) {
+          const dayLower = dayName.toLowerCase()
+          const pluralDay = (dayLower === 'sábado' || dayLower === 'domingo') ? `${dayLower}s` : dayLower
           warnings.push(
-            `💡 Alerta de Negocio: Los ${dayName.toLowerCase()}s registran baja demanda (${Math.round(pct)}% de reservas). Se sugiere promocionar pools con tarifas reducidas.`
+            `💡 Alerta de Negocio: Los ${pluralDay} registran baja demanda (${Math.round(pct)}% de reservas). Se sugiere promocionar pools con tarifas reducidas.`
           )
         }
       }
