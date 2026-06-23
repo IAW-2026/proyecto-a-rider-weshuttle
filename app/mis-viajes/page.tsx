@@ -285,7 +285,7 @@ export default async function MisViajesPage({
 
     const isPast = new Date(reservaCheck.departure_time) < new Date();
     if (isPast || reservaCheck.reservation_status === 'CANCELED') {
-      redirect(`/mis-viajes?toast=Error:%20El%20viaje%20ya%20expiró%20o%20fue%20cancelado&toastType=error#viaje-${id}`);
+      redirect(`/mis-viajes?toast=${encodeURIComponent("Error: El viaje ya expiró o fue cancelado")}&toastType=error#viaje-${id}`);
     }
 
     if (!reservaCheck.pool_id) {
@@ -298,7 +298,7 @@ export default async function MisViajesPage({
       const driverData = await getDriverAppAssignedDriver(reservaCheck.pool_id);
 
       if (!driverData || !driverData.driver) {
-        redirectUrl = `/mis-viajes?toast=Aún%20sin%20conductor%20asignado.%20Consultá%20más%20tarde.&toastType=warning#viaje-${id}`;
+        redirectUrl = `/mis-viajes?toast=${encodeURIComponent("Aún sin conductor asignado. Consultá más tarde.")}&toastType=warning#viaje-${id}`;
       } else {
         const ratingData = await getFeedbackAppRating(driverData.driver.driver_user_id);
 

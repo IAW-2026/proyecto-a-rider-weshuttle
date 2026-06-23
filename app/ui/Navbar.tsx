@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useUser, UserButton } from "@clerk/nextjs"
 import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 
 interface NavbarProps {
   isAdmin?: boolean;
@@ -11,8 +12,19 @@ interface NavbarProps {
 }
 
 export default function Navbar({ isAdmin = false, notificaciones = [], limpiarNotificaciones }: NavbarProps) {
-  const { user, isSignedIn } = useUser()
+  const { user, isSignedIn, isLoaded } = useUser()
   const pathname = usePathname()
+  const [origin, setOrigin] = useState('')
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    if (typeof window !== 'undefined') {
+      setOrigin(window.location.origin)
+    }
+  }, [])
+
+  const returnUrl = origin || process.env.NEXT_PUBLIC_RIDER_APP_URL || '#'
 
   // Rol del usuario y nombre en Clerk para consistencia de metadatos
   const role = (user?.publicMetadata?.role as string) || "Rider"
@@ -45,7 +57,7 @@ export default function Navbar({ isAdmin = false, notificaciones = [], limpiarNo
         </Link>
 
         {/* ENLACES CENTRALES DE NAVEGACIÓN (Rider App) */}
-        {isSignedIn && (
+        {isSignedIn && mounted && (
           <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center h-full gap-8">
             <Link 
               href="/" 
@@ -81,8 +93,11 @@ export default function Navbar({ isAdmin = false, notificaciones = [], limpiarNo
         )}
 
         {/* ACCIONES Y PERFIL DE USUARIO */}
-        <div className="flex items-center gap-4 h-full">
-          {isSignedIn ? (
+        <div className="flex items-center gap-4 h-full min-w-[80px] justify-end">
+          {!mounted || !isLoaded ? (
+            /* Esqueleto de carga sutil para evitar saltos y destellos del botón Ingresar */
+            <div className="h-9 w-9 rounded-full bg-slate-100 animate-pulse shrink-0" />
+          ) : isSignedIn ? (
             <>
               {/* CAMPANITA DE NOTIFICACIONES */}
               <div className="relative group flex items-center h-full" tabIndex={0}>
@@ -116,7 +131,7 @@ export default function Navbar({ isAdmin = false, notificaciones = [], limpiarNo
                           <div key={notif.id} className="p-3 mb-1 bg-[#F7F9FB] text-[var(--ws-midnight)] text-[12px] rounded-lg border border-[var(--ws-outline)]">
                             {notif.type === 'FEEDBACK_AVAILABLE' ? (
                               <a 
-                                href={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || '#'}/?return_url=${process.env.NEXT_PUBLIC_RIDER_APP_URL || '#'}`} 
+                                href={`${process.env.NEXT_PUBLIC_FEEDBACK_APP_URL || '#'}/?return_url=${encodeURIComponent(returnUrl)}`} 
                                 className="text-[#3B82F6] hover:underline font-bold block"
                               >
                                 {notif.message} <span className="material-symbols-outlined text-[10px] align-middle ml-1">open_in_new</span>

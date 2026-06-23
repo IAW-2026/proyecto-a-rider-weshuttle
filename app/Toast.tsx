@@ -3,20 +3,33 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 
+// Función robusta para decodificar caracteres UTF-8 mal interpretados (mojibake)
+function decodeUTF8String(str: string): string {
+  try {
+    // Si la cadena está doblemente codificada (ej: "AÃºn"), reconstruimos y decodificamos los bytes UTF-8 correctos
+    return decodeURIComponent(escape(str));
+  } catch (e) {
+    // Si ya viene decodificada de forma correcta o contiene caracteres válidos, retornamos la original
+    return str;
+  }
+}
+
 export default function Toast() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const [message, setMessage] = useState<string | null>(null)
-  const [type, setType] = useState<'success' | 'error' | 'info'>('success')
+  const [type, setType] = useState<'success' | 'error' | 'info' | 'warning'>('success')
+  const [isExiting, setIsExiting] = useState(false)
 
   useEffect(() => {
     const toastMsg = searchParams.get('toast')
-    const toastType = (searchParams.get('toastType') as 'success' | 'error' | 'info') || 'success'
+    const toastType = (searchParams.get('toastType') as 'success' | 'error' | 'info' | 'warning') || 'success'
     
     if (toastMsg) {
-      setMessage(toastMsg)
+      setMessage(decodeUTF8String(toastMsg))
       setType(toastType)
+      setIsExiting(false)
       
       // Limpiamos la URL usando el router de Next.js para evitar bugs visuales
       const newParams = new URLSearchParams(searchParams.toString())
@@ -27,15 +40,27 @@ export default function Toast() {
   }, [searchParams, pathname, router])
 
   useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(null), 4000)
+    if (message && !isExiting) {
+      const timer = setTimeout(() => {
+        setIsExiting(true)
+      }, 4000)
       return () => clearTimeout(timer)
     }
-  }, [message])
+  }, [message, isExiting])
+
+  useEffect(() => {
+    if (isExiting) {
+      const timer = setTimeout(() => {
+        setMessage(null)
+        setIsExiting(false)
+      }, 300) // Coincide con la duración de la transición
+      return () => clearTimeout(timer)
+    }
+  }, [isExiting])
 
   if (!message) return null
 
-  const onClose = () => setMessage(null)
+  const onClose = () => setIsExiting(true)
 
   const icons = {
     success: (
@@ -55,26 +80,38 @@ export default function Toast() {
         <line x1="12" y1="16" x2="12" y2="12"></line>
         <line x1="12" y1="8" x2="12.01" y2="8"></line>
       </svg>
+    ),
+    warning: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
     )
   }
 
   const styles = {
     success: { border: 'border-green-100', text: 'text-green-600' },
     error: { border: 'border-red-100', text: 'text-red-600' },
-    info: { border: 'border-blue-100', text: 'text-blue-600' }
+    info: { border: 'border-blue-100', text: 'text-blue-600' },
+    warning: { border: 'border-amber-100', text: 'text-amber-600' }
   }
 
-  const currentStyle = styles[type]
+  const currentStyle = styles[type] || styles.info
+  const currentIcon = icons[type] || icons.info
 
   return (
     <div
-      className="
+      className={`
         fixed
         bottom-8
         right-8
         z-[120]
-        animate-[toastSlideIn_2.5s_cubic-bezier(0.22,1,0.36,1)]
-      "
+        transition-all
+        duration-300
+        ease-[cubic-bezier(0.16,1,0.3,1)]
+        ${isExiting ? 'opacity-0 translate-y-4 scale-95 pointer-events-none' : 'opacity-100 translate-y-0 scale-100 animate-[toastSlideIn_0.45s_cubic-bezier(0.22,1,0.36,1)]'}
+      `}
     >
       <div
         className={`flex items-center gap-4 p-4 rounded-[20px] bg-white border ${currentStyle.border} shadow-2xl min-w-[320px] border-l-4 ${
@@ -82,13 +119,15 @@ export default function Toast() {
             ? 'border-l-green-500'
             : type === 'error'
             ? 'border-l-red-500'
+            : type === 'warning'
+            ? 'border-l-amber-500'
             : 'border-l-midnight'
         }`}
       >
         <div
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-50 ${currentStyle.text} font-black text-lg`}
         >
-          {icons[type]}
+          {currentIcon}
         </div>
 
         <div className="flex-1">

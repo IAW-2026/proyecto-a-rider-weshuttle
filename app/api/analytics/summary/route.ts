@@ -106,7 +106,10 @@ export async function GET(request: Request) {
     }
 
     for (const res of reservationsForInsights) {
-      const dayName = daysName[new Date(res.departure_time).getUTCDay()]
+      // Ajustar a zona horaria de Argentina (UTC-3) para agrupar por el día local de negocio correcto
+      const utcTime = new Date(res.departure_time).getTime()
+      const argTime = new Date(utcTime - (3 * 60 * 60 * 1000))
+      const dayName = daysName[argTime.getUTCDay()]
       if (dayName) {
         daysMap[dayName] = (daysMap[dayName] || 0) + 1
       }
@@ -171,7 +174,10 @@ export async function GET(request: Request) {
     // c. Calcular hora pico
     const hourCounts: Record<number, number> = {}
     for (const res of reservationsForInsights) {
-      const hour = new Date(res.departure_time).getUTCHours()
+      // Ajustar a zona horaria de Argentina (UTC-3) para calcular la hora pico local de negocio
+      const utcTime = new Date(res.departure_time).getTime()
+      const argTime = new Date(utcTime - (3 * 60 * 60 * 1000))
+      const hour = argTime.getUTCHours()
       hourCounts[hour] = (hourCounts[hour] || 0) + 1
     }
 
