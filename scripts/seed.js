@@ -140,7 +140,7 @@ async function main() {
     6: []  // Sábado
   }
 
-  for (let i = -14; i <= 6; i++) {
+  for (let i = -14; i <= -1; i++) {
     const d = new Date()
     d.setDate(today.getDate() + i)
     const dayOfWeek = d.getDay() // getDay() local
