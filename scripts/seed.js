@@ -103,16 +103,16 @@ async function main() {
   console.log('🌱 Generando reservas con patrones de negocio...');
   const today = new Date()
   const reservations = []
-  
+
   // Total de reservas a crear: 500
   // Exitosas: 360, Canceladas: 140 (28% cancelaciones, dispara la alerta de retención > 25% de forma realista)
   const passengerAssignments = []
-  
+
   // 1. Asignaciones Exitosas (360 en total)
   for (let i = 0; i < 110; i++) passengerAssignments.push({ clerk_user_id: "user_3EYGNPDkh6Nqg38YBdCb0TeAdNi", status: "CONFIRMED", payment: "PAID" }) // VIP #1 (110 viajes)
   for (let i = 0; i < 100; i++) passengerAssignments.push({ clerk_user_id: "user_3Db8E5HISehCv1nAJkIwlHXxtiG", status: "CONFIRMED", payment: "PAID" }) // VIP #2 (100 viajes)
   for (let i = 0; i < 60; i++) passengerAssignments.push({ clerk_user_id: "user_3FQc2n3EzY9IuARMfRHIV6zL6LI", status: "CONFIRMED", payment: "PAID" })  // VIP #3 (60 viajes)
-  
+
   // Otros usuarios con viajes exitosos pero menores para no interferir en el VIP
   for (let i = 0; i < 35; i++) passengerAssignments.push({ clerk_user_id: "user_3EYQtdZpi4fPlmXGq4EKEa1onL0", status: "CONFIRMED", payment: "PAID" }) // Juan Bassi
   for (let i = 0; i < 20; i++) passengerAssignments.push({ clerk_user_id: "user_3EZBdD7n2UefoPdzP4FS1Unf864", status: "CONFIRMED", payment: "PAID" }) // Santiago Lopez
@@ -124,7 +124,7 @@ async function main() {
   for (let i = 0; i < 45; i++) passengerAssignments.push({ clerk_user_id: "user_3EYGQCDMhqZaMRhMIgYvm46DK1P", status: "CANCELED", payment: "PAID" }) // Juan Perez: 45 cancelados / 60 totales = 75% tasa
   for (let i = 0; i < 38; i++) passengerAssignments.push({ clerk_user_id: "user_3EZBdD7n2UefoPdzP4FS1Unf864", status: "CANCELED", payment: "PAID" }) // Santiago Lopez: 38 cancelados / 58 totales = 65.5% tasa
   for (let i = 0; i < 32; i++) passengerAssignments.push({ clerk_user_id: "user_3Dwjs2tNYWJq2r3WfN06m9gm533", status: "CANCELED", payment: "PAID" }) // Juan: 32 cancelados / 52 totales = 61.5% tasa
-  
+
   // Pocas cancelaciones adicionales a otros para rellenar
   for (let i = 0; i < 15; i++) passengerAssignments.push({ clerk_user_id: "user_3EYQtdZpi4fPlmXGq4EKEa1onL0", status: "CANCELED", payment: "PAID" }) // Juan Bassi (30% tasa)
   for (let i = 0; i < 10; i++) passengerAssignments.push({ clerk_user_id: "user_3FQc2n3EzY9IuARMfRHIV6zL6LI", status: "CANCELED", payment: "PAID" })  // Kevin Gomez (14.3% tasa)
@@ -171,13 +171,13 @@ async function main() {
   for (let index = 0; index < 500; index++) {
     const assignment = shuffledAssignments[index]
     const pProfile = passengers.find(p => p.clerk_user_id === assignment.clerk_user_id)
-    
+
     const assignedDay = targetDays[index]
     const datesList = datesByDayOfWeek[assignedDay]
     const dateObj = datesList[index % datesList.length]
 
     const reservationDate = new Date(dateObj)
-    
+
     // Evitar desbordes el último día del rango
     const limitDate = new Date()
     limitDate.setDate(today.getDate() + 6)
@@ -196,7 +196,7 @@ async function main() {
     const year = reservationDate.getFullYear()
     const month = reservationDate.getMonth()
     const day = reservationDate.getDate()
-    
+
     let departureTimeUTC
     if (horaLocal === 21) {
       departureTimeUTC = new Date(Date.UTC(year, month, day + 1, 0, 0, 0))
