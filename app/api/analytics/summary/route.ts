@@ -136,7 +136,7 @@ export async function GET(request: Request) {
       const stats = passengerStats[passengerId]
       stats.totalCount++
 
-      if (res.payment_status === 'PAID') {
+      if (res.payment_status === 'PAID' && res.reservation_status !== 'CANCELED') {
         stats.completedCount++
         stats.spentAmount += res.amount_charged || 0
       }
