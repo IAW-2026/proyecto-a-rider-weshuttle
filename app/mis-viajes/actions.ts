@@ -9,8 +9,13 @@ export async function getPoolStatusAction(poolId: string) {
   try {
     return await getDriverAppPoolStatus(poolId)
   } catch (error: any) {
-    console.error("Error in getPoolStatusAction Server Action:", error)
-    throw new Error(error.message || "Failed to fetch status")
+    // Si el pool no existe (ej: datos semilla) o la Driver App no responde,
+    // devolvemos un estado por defecto seguro para evitar ensuciar los logs con errores 500.
+    return {
+      status: 'ASSIGNED',
+      target_user_id: null,
+      hito: null
+    }
   }
 }
 

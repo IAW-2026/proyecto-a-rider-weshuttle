@@ -454,7 +454,7 @@ export default async function MisViajesPage({
                     </div>
                   )}
                   
-                  {reserva.pool_id && ['CONFIRMED', 'PENDING_DRIVER'].includes(reserva.reservation_status) && !(isPast && reserva.reservation_status === 'PENDING_DRIVER') && (
+                  {reserva.pool_id && ['CONFIRMED', 'PENDING_DRIVER'].includes(reserva.reservation_status) && !isPast && (
                     <TripTracker 
                       poolId={reserva.pool_id} 
                       passengerUserId={reserva.passenger_user_id} 
@@ -657,7 +657,7 @@ export default async function MisViajesPage({
                         </div>
                       )}
                       
-                      {reserva.pool_id && ['CONFIRMED', 'PENDING_DRIVER'].includes(reserva.reservation_status) && !(isPast && reserva.reservation_status === 'PENDING_DRIVER') && (
+                      {reserva.pool_id && ['CONFIRMED', 'PENDING_DRIVER'].includes(reserva.reservation_status) && !isPast && (
                         <TripTracker 
                           poolId={reserva.pool_id} 
                           passengerUserId={reserva.passenger_user_id} 

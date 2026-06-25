@@ -129,7 +129,7 @@ async function main() {
   for (let i = 0; i < 15; i++) passengerAssignments.push({ clerk_user_id: "user_3EYQtdZpi4fPlmXGq4EKEa1onL0", status: "CANCELED", payment: "PAID" }) // Juan Bassi (30% tasa)
   for (let i = 0; i < 10; i++) passengerAssignments.push({ clerk_user_id: "user_3FQc2n3EzY9IuARMfRHIV6zL6LI", status: "CANCELED", payment: "PAID" })  // Kevin Gomez (14.3% tasa)
 
-  // Rango de fechas: [-14, 6] días
+  // Rango de fechas: [-90, 7] días para cubrir al menos 3 meses de actividad
   const datesByDayOfWeek = {
     0: [], // Domingo
     1: [], // Lunes
@@ -140,7 +140,7 @@ async function main() {
     6: []  // Sábado
   }
 
-  for (let i = -14; i <= -1; i++) {
+  for (let i = -90; i <= -1; i++) {
     const d = new Date()
     d.setDate(today.getDate() + i)
     const dayOfWeek = d.getDay() // getDay() local
@@ -180,7 +180,7 @@ async function main() {
 
     // Evitar desbordes el último día del rango
     const limitDate = new Date()
-    limitDate.setDate(today.getDate() + 6)
+    limitDate.setDate(today.getDate() - 1)
     const isLastDay = reservationDate.toDateString() === limitDate.toDateString()
 
     let horaLocal
