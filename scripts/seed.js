@@ -163,10 +163,11 @@ async function main() {
 
   // Asignar horas y generar registros
   let horaPicoCount = 0
-  const pools = [
-    'pool_lunes_1', 'pool_lunes_2', 'pool_viernes_1', 'pool_viernes_2',
-    'pool_sabado_1', 'pool_sabado_2', 'pool_domingo_1', 'pool_domingo_2'
-  ]
+  
+  // Estructuras de control para asegurar capacidad máxima de 15 pasajeros
+  // y que un pasajero no esté en el mismo pool dos veces
+  const passengerPoolSet = new Set()
+  const poolPassengerCount = {}
 
   for (let index = 0; index < 500; index++) {
     const assignment = shuffledAssignments[index]
@@ -183,6 +184,15 @@ async function main() {
     limitDate.setDate(today.getDate() - 1)
     const isLastDay = reservationDate.toDateString() === limitDate.toDateString()
 
+    let destId
+    if (index % 2 === 0) {
+      destId = 'dest_polo_petroquimico'
+    } else if (index % 4 === 1) {
+      destId = 'dest_puerto_ingeniero_white'
+    } else {
+      destId = 'dest_parque_industrial'
+    }
+
     let horaLocal
     // Colocar hora pico en los días de mayor volumen (Lunes, Viernes, Sábado)
     if (horaPicoCount < 130 && (assignedDay === 1 || assignedDay === 5 || assignedDay === 6) && !isLastDay) {
@@ -191,6 +201,34 @@ async function main() {
     } else {
       const options = [8, 12, 17]
       horaLocal = options[index % options.length]
+    }
+
+    const dateStr = dateObj.toISOString().split('T')[0] // YYYY-MM-DD
+
+    // Si es confirmado, generamos un pool único por fecha, hora y destino
+    let poolId = null
+    if (assignment.status === "CONFIRMED") {
+      let basePoolId = `pool_${assignedDay}_${destId.replace('dest_', '')}_${horaLocal}_${dateStr}`
+      let uniquePoolId = basePoolId
+      let attempt = 0
+      const passengerId = pProfile.clerk_user_id
+
+      // Si el pasajero ya está en ese pool, o el pool tiene >= 15 personas, buscamos otra hora para el mismo día
+      while (
+        (passengerPoolSet.has(`${passengerId}_${uniquePoolId}`) || (poolPassengerCount[uniquePoolId] || 0) >= 15) &&
+        attempt < 15
+      ) {
+        attempt++
+        const alternativeHour = [8, 12, 17, 21][(horaLocal + attempt) % 4]
+        uniquePoolId = `pool_${assignedDay}_${destId.replace('dest_', '')}_${alternativeHour}_${dateStr}`
+        
+        // Actualizamos horaLocal si cambia por el desplazamiento
+        horaLocal = alternativeHour
+      }
+
+      poolId = uniquePoolId
+      passengerPoolSet.add(`${passengerId}_${poolId}`)
+      poolPassengerCount[poolId] = (poolPassengerCount[poolId] || 0) + 1
     }
 
     const year = reservationDate.getFullYear()
@@ -203,17 +241,6 @@ async function main() {
     } else {
       departureTimeUTC = new Date(Date.UTC(year, month, day, horaLocal + 3, 0, 0))
     }
-
-    let destId
-    if (index % 2 === 0) {
-      destId = 'dest_polo_petroquimico'
-    } else if (index % 4 === 1) {
-      destId = 'dest_puerto_ingeniero_white'
-    } else {
-      destId = 'dest_parque_industrial'
-    }
-
-    const poolId = assignment.status === "CONFIRMED" ? pools[index % pools.length] : null
 
     const maxPrice = 3500
     const amountCharged = maxPrice
