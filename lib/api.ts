@@ -4,6 +4,14 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json'
   };
+  
+  // Si existe la clave interna para comunicación inter-servicios, la usamos prioritariamente
+  const internalKey = process.env.WESHUTTLE_INTERNAL_KEY;
+  if (internalKey) {
+    headers['Authorization'] = `Bearer ${internalKey}`;
+    return headers;
+  }
+
   try {
     const { getToken } = await auth();
     const token = await getToken();
