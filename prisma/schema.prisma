@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Enumerado de estados 
+enum ReservationStatus {
+  PENDING_PAYMENT
+  PENDING_DRIVER
+  CONFIRMED
+  CANCELED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  PAID
+  DENIED
+  CANCELED
+  EXPIRED
+}
+
+model Passenger {
+  id            String   @id @default(cuid())
+  clerk_user_id String   @unique
+  full_name     String
+  phone         String
+  company_code  String?
+  status        String   @default("ACTIVE") // ACTIVE, INACTIVE, BLOCKED
+
+  reservations  Reservation[]
+  notifications PassengerNotification[]
+
+  @@map("passengers")
+}
+
+model Destination {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  address     String
+  lat         Float
+  lng         Float
+  active      Boolean  @default(true)
+
+  reservations Reservation[]
+
+  @@map("destinations")
+}
+
+model Reservation {
+  id                       String   @id @default(cuid())
+  passenger_id             String
+  passenger_user_id        String
+  pool_id                  String?
+  destination_id           String
+  departure_time           DateTime
+  pickup_address           String
+  pickup_lat               Float
+  pickup_lng               Float
+  reservation_status       ReservationStatus @default(PENDING_PAYMENT)
+  payment_status           PaymentStatus     @default(UNPAID)
+  max_price                Float
+  amount_charged           Float?
+  credit_applied           Float             @default(0)
+  final_trip_price         Float?
+  credit_granted           Float             @default(0)
+  currency                 String   @default("ARS")
+  payment_transaction_id   String?
+  payment_rejection_reason String?
+  assigned_driver_snapshot Json?
+
+  passenger   Passenger   @relation(fields: [passenger_id], references: [id])
+  destination Destination @relation(fields: [destination_id], references: [id])
+
+  @@map("reservations")
+}
+
+model PassengerNotification {
+  id                String    @id @default(cuid())
+  passenger_user_id String
+  reservation_id    String?
+  pool_id           String?
+  type              String    // ej: POOL_CANCELED, PAYMENT_DENIED
+  message           String
+  read_at           DateTime?
+  created_at        DateTime  @default(now())
+
+  passenger Passenger @relation(fields: [passenger_user_id], references: [clerk_user_id])
+
+  @@map("passenger_notifications")
+}

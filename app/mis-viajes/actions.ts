@@ -1,0 +1,70 @@
+'use server'
+
+import { getDriverAppPoolStatus } from '@/lib/api'
+import { prisma } from '@/lib/prisma'
+import { auth, createClerkClient } from '@clerk/nextjs/server'
+import { revalidatePath } from 'next/cache'
+
+export async function getPoolStatusAction(poolId: string) {
+  try {
+    return await getDriverAppPoolStatus(poolId)
+  } catch (error: any) {
+    // Si el pool no existe (ej: datos semilla) o la Driver App no responde,
+    // devolvemos un estado por defecto seguro para evitar ensuciar los logs con errores 500.
+    return {
+      status: 'ASSIGNED',
+      target_user_id: null,
+      hito: null
+    }
+  }
+}
+
+export async function saveProfileAction(formData: FormData) {
+  const { userId, sessionClaims } = await auth()
+  if (!userId) throw new Error("No autenticado")
+
+  const fullName = formData.get('fullName') as string
+  const phone = formData.get('phone') as string
+  const companyCode = formData.get('companyCode') as string
+
+  if (!fullName || fullName.trim().length < 3) {
+    throw new Error("El nombre completo debe tener al menos 3 caracteres.")
+  }
+  const phoneRegex = /^\+?[0-9\s\-()]{6,20}$/;
+  if (!phone || !phoneRegex.test(phone.trim())) {
+    throw new Error("El formato del teléfono es inválido. Debe tener entre 6 y 20 caracteres y solo permitir números, espacios, +, - o ().")
+  }
+
+  await prisma.passenger.upsert({
+    where: { clerk_user_id: userId },
+    update: {
+      full_name: fullName.trim(),
+      phone: phone.trim(),
+      company_code: companyCode?.trim() || null
+    },
+    create: {
+      clerk_user_id: userId,
+      full_name: fullName.trim(),
+      phone: phone.trim(),
+      company_code: companyCode?.trim() || null
+    }
+  })
+
+  // Asignar el rol 'rider' en Clerk si no es admin
+  try {
+    if (sessionClaims?.role !== 'admin') {
+      const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+      await clerkClient.users.updateUserMetadata(userId, {
+        publicMetadata: {
+          role: 'rider'
+        }
+      })
+    }
+  } catch (clerkErr) {
+    console.error("Error al guardar metadata de rol en Clerk:", clerkErr)
+  }
+
+  revalidatePath('/')
+  revalidatePath('/mis-viajes')
+  revalidatePath('/reservar')
+}
